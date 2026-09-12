@@ -218,6 +218,13 @@ nav .badge{
 .sugs button:last-child{border-bottom:0}
 .sugs button.sel,.sugs button:hover{background:#F6F5F0}
 
+.src{
+  display:inline-block;margin-top:8px;font-size:11.5px;padding:1px 8px;
+  border-radius:5px;background:#E8F3EC;color:#2E7D5B;
+}
+.src.alt{background:#F1F0EA;color:var(--graphite)}
+.srcnote{margin-top:10px;font-size:12.5px;color:var(--coral);line-height:1.5}
+
 .forms{display:flex;flex-wrap:wrap;gap:6px;margin-top:11px}
 .forms span{background:#F1F0EA;border-radius:6px;padding:2px 9px;font-size:13px;color:var(--graphite)}
 .forms span b{font-family:var(--serif);font-weight:600;color:var(--ink);margin-left:6px}
@@ -257,7 +264,7 @@ nav .badge{
     <div class="adderwrap">
       <div class="adder">
         <input id="newword" type="text" inputmode="text" autocapitalize="off" autocorrect="off"
-               spellcheck="false" autocomplete="off" placeholder="輸入不會的單字，按加入" enterkeyhint="done">
+               spellcheck="false" autocomplete="off" placeholder="輸入不會的單字或片語" enterkeyhint="done">
         <button id="addbtn">加入</button>
       </div>
       <div class="sugs" id="sugs" hidden></div>
@@ -299,7 +306,7 @@ nav .badge{
 
     <div class="block">
       <h2>用 Gemini 查單字</h2>
-      <p>貼上你自己的 Gemini API 金鑰，查詢會快很多，而且一次就拿到繁體意思、所有詞性、詞形變化和例句。金鑰只存在這台裝置的瀏覽器裡，不會上傳到 GitHub。</p>
+      <p>貼上你自己的 Gemini API 金鑰，查詢會快很多，而且一次就拿到繁體意思、所有詞性、詞形變化和例句。音標是 KK 音標，片語和慣用語也查得到。金鑰只存在這台裝置的瀏覽器裡，不會上傳到 GitHub。</p>
       <div class="keyrow">
         <input id="gemkey" type="password" autocomplete="off" placeholder="貼上 Gemini API 金鑰">
         <button id="savekey">儲存</button>
@@ -465,7 +472,7 @@ async function lookupPrimary(term){
     if(senses.length >= 3) break;
   }
   if(!senses.length) throw new Error('empty');
-  return { phon, senses, example };
+  return { phon, senses, example, src:'dict' };
 }
 
 // 備援二：Wiktionary
@@ -496,21 +503,23 @@ async function lookupWiktionary(term){
     if(senses.length >= 3) break;
   }
   if(!senses.length){ const e = new Error('notfound'); e.code = 404; throw e; }
-  return { phon:'', senses, example };
+  return { phon:'', senses, example, src:'dict' };
 }
 
 // 首選：Gemini，一次回繁體意思、所有詞性、詞形變化、例句
 async function lookupGemini(term){
   const model = (settings.model || DEFAULT_MODEL).trim();
   const prompt =
-    '你是一本英漢辭典。請針對英文單字「' + term + '」輸出辭典資料。' +
+    '你是一本給台灣學生用的英漢辭典。請針對英文單字或片語「' + term + '」輸出辭典資料。' +
     '所有中文一律使用台灣繁體中文，絕對不可以出現任何簡體字。' +
-    'zh 欄位是最常見的中文意思，十個字以內。' +
-    'senses 每個詞性各一筆，最多四筆，pos 用中文詞性名稱（名詞、動詞、形容詞、副詞、介系詞…），' +
-    'zh 是該詞性的中文解釋，def 是對應的英文解釋。' +
-    'forms 是詞形變化：動詞給過去式、過去分詞、現在分詞；名詞給複數；形容詞給比較級、最高級；' +
-    '沒有變化就回空陣列。label 用中文，value 是變化後的英文。' +
-    'phon 是 KK 或 IPA 音標。example 是一句自然的英文例句，exampleZh 是它的繁體中文翻譯。';
+    'phon 一定要是 KK 音標（台灣國高中教科書使用的 K.K. 系統），用方括號包起來，例如 [ˋfrædʒəl]；' +
+    '不要給 IPA。如果輸入是片語或慣用語，phon 回空字串。' +
+    'zh 是最常見的中文意思，十五個字以內。' +
+    'senses 每個詞性或用法各一筆，最多四筆；pos 用中文（名詞、動詞、形容詞、副詞、介系詞、片語、慣用語…），' +
+    'zh 是中文解釋，def 是對應的英文解釋。' +
+    'forms 是變化形：動詞給過去式、過去分詞、現在分詞；名詞給複數；形容詞給比較級、最高級；' +
+    '片語就給整個片語的動詞變化；都沒有就回空陣列。label 用中文，value 是變化後的英文。' +
+    'example 是一句自然的英文例句，exampleZh 是它的繁體中文翻譯。';
   const responseSchema = {
     type:'object',
     properties:{
@@ -535,7 +544,10 @@ async function lookupGemini(term){
       headers:{ 'Content-Type':'application/json', 'x-goog-api-key': settings.key },
       body: JSON.stringify({
         contents:[{ parts:[{ text: prompt }] }],
-        generationConfig:{ responseMimeType:'application/json', responseSchema, temperature:0.2 }
+        generationConfig:{
+          responseMimeType:'application/json', responseSchema, temperature:0.2,
+          thinkingConfig:{ thinkingBudget: 0 }
+        }
       })
     }), 20000);
   if(!r.ok){
@@ -554,15 +566,18 @@ async function lookupGemini(term){
   return {
     phon: d.phon || '', zh: d.zh || '', senses,
     forms: (d.forms || []).slice(0,6).filter(f => f && f.label && f.value),
-    example: d.example || '', exampleZh: d.exampleZh || ''
+    example: d.example || '', exampleZh: d.exampleZh || '', src:'gemini'
   };
 }
 
 async function lookup(term){
+  lastGeminiError = '';
   if(settings.key){
     try{ return await lookupGemini(term); }
     catch(e){ lastGeminiError = e.message; }
   }
+  // 免費字典只收單字，片語一定查不到，直接講清楚
+  if(/\s/.test(term)){ const e = new Error('phrase'); e.code = 'phrase'; throw e; }
   try{ return await lookupPrimary(term); }
   catch(e){ return await lookupWiktionary(term); }
 }
@@ -575,6 +590,10 @@ async function fillWord(w){
     w.senses = got.senses;
     w.example = got.example;
     w.forms = got.forms || [];
+    w.src = got.src || '';
+    w.srcNote = (settings.key && got.src !== 'gemini')
+      ? ('Gemini 沒回應，這筆是備援字典查的：' + (lastGeminiError || '原因不明'))
+      : '';
     if(got.zh) w.zh = got.zh;
     if(got.exampleZh) w.exampleZh = got.exampleZh;
     w.status = 'ok';
@@ -593,7 +612,9 @@ async function fillWord(w){
     }
     save(); renderList();
   }catch(err){
-    w.status = err.code === 404 ? 'notfound' : 'error';
+    w.status = err.code === 'phrase' ? 'phrase' : (err.code === 404 ? 'notfound' : 'error');
+    w.src = '';
+    w.srcNote = (settings.key && lastGeminiError) ? ('Gemini：' + lastGeminiError) : '';
     save(); renderList();
   }
 }
@@ -645,6 +666,11 @@ function dotsHtml(w){
   h += `<span class="due">${esc(dueText(w))}</span></div>`;
   return h;
 }
+function srcBadge(w){
+  if(!w.src) return '';
+  const g = w.src === 'gemini';
+  return '<span class="src' + (g ? '' : ' alt') + '">' + (g ? 'Gemini' : '備援字典') + '</span>';
+}
 function formsHtml(w){
   if(!w.forms || !w.forms.length) return '';
   return '<div class="forms">' + w.forms.map(f =>
@@ -667,6 +693,8 @@ function cardHtml(w){
   }else if(w.status === 'notfound'){
     body = `<div class="status err">字典查不到這個字，確認一下拼字，或自己填。
               <button class="retry" data-act="retry" data-id="${w.id}">重查</button></div>`;
+  }else if(w.status === 'phrase'){
+    body = `<div class="status err">片語要設 Gemini 金鑰才查得到，免費字典只收單字。到「更多」設定金鑰，或點「編輯」自己填。</div>`;
   }else if(w.status === 'error'){
     body = `<div class="status err">連不上字典，可能是沒網路。
               <button class="retry" data-act="retry" data-id="${w.id}">重試</button></div>`;
@@ -704,10 +732,12 @@ function cardHtml(w){
       <div>
         <span class="termwrap"><i class="marker" style="${markerStyle(w)}"></i><span class="term">${esc(w.term)}</span></span>
         ${(w.phon || w.zh) ? `<div class="phon">${[w.phon, w.zh].filter(Boolean).map(esc).join(' · ')}</div>` : ''}
+        ${srcBadge(w)}
       </div>
       <button class="speak" data-act="speak" data-id="${w.id}" aria-label="唸出 ${esc(w.term)}">♪</button>
     </div>
     ${body}
+    ${w.srcNote ? `<div class="srcnote">${esc(w.srcNote)}</div>` : ''}
     ${formsHtml(w)}
     ${ex}
     ${note}
@@ -736,7 +766,7 @@ function renderList(){
   if(!words.length){
     box.innerHTML = `<div class="empty">
       <div class="big">還沒有單字</div>
-      <p>看到不會的字就丟進上面那格。<br>詞性、意思、例句我會自動補上。</p></div>`;
+      <p>看到不會的字或片語就丟進上面那格。<br>音標、詞性、意思、例句我會自動補上。</p></div>`;
   }else if(!list.length){
     box.innerHTML = `<div class="empty"><p>這個分類目前是空的。</p></div>`;
   }else{
