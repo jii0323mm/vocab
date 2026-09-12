@@ -251,7 +251,7 @@ nav .badge{
 
     <div class="block">
       <h2>資料從哪來</h2>
-      <p>英文解釋、詞性、例句和音標來自 Free Dictionary API，中文意思用 MyMemory 翻譯。查不到或翻得怪的時候，點單字卡上的「編輯」自己改，改完就是你自己的版本。</p>
+      <p>英文解釋、詞性、例句和音標來自 Free Dictionary API，那邊查不到或連不上就改用 Wiktionary；中文意思用 MyMemory 翻譯。查不到或翻得怪的時候，點單字卡上的「編輯」自己改，改完就是你自己的版本。</p>
     </div>
 
     <div class="block">
@@ -336,17 +336,24 @@ async function translate(text){
   return t.trim();
 }
 
-async function lookup(term){
-  const r = await fetch('https://api.dictionaryapi.dev/api/v2/entries/en/' +
-                        encodeURIComponent(term));
-  if(r.status === 404) { const e = new Error('notfound'); e.code = 404; throw e; }
-  if(!r.ok) throw new Error('http ' + r.status);
-  const data = await r.json();
-  const entry = data[0] || {};
+const withTimeout = (p, ms) =>
+  Promise.race([p, new Promise((_,rj)=>setTimeout(()=>rj(new Error('timeout')), ms))]);
 
+const stripTags = h => {
+  const d = document.createElement('div');
+  d.innerHTML = h || '';
+  return (d.textContent || '').replace(/\s+/g,' ').trim();
+};
+
+// 主要來源：Free Dictionary API（有音標和例句）
+async function lookupPrimary(term){
+  const r = await withTimeout(
+    fetch('https://api.dictionaryapi.dev/api/v2/entries/en/' + encodeURIComponent(term)), 7000);
+  if(r.status === 404){ const e = new Error('notfound'); e.code = 404; throw e; }
+  if(!r.ok) throw new Error('http ' + r.status);
+  const entry = (await r.json())[0] || {};
   const phon = entry.phonetic ||
     (entry.phonetics || []).map(p => p.text).find(Boolean) || '';
-
   const senses = [];
   let example = '';
   for(const m of (entry.meanings || [])){
@@ -363,7 +370,44 @@ async function lookup(term){
     }
     if(senses.length >= 3) break;
   }
+  if(!senses.length) throw new Error('empty');
   return { phon, senses, example };
+}
+
+// 備援：Wiktionary（主要 API 掛掉或查不到時用）
+async function lookupWiktionary(term){
+  const r = await withTimeout(
+    fetch('https://en.wiktionary.org/api/rest_v1/page/definition/' +
+          encodeURIComponent(term.toLowerCase())), 9000);
+  if(r.status === 404){ const e = new Error('notfound'); e.code = 404; throw e; }
+  if(!r.ok) throw new Error('http ' + r.status);
+  const groups = (await r.json()).en || [];
+  const senses = [];
+  let example = '';
+  for(const g of groups){
+    const defs = g.definitions || [];
+    const d = defs.find(x => stripTags(x.definition).length > 3);
+    if(!d) continue;
+    senses.push({
+      pos: POS[(g.partOfSpeech || '').toLowerCase()] || g.partOfSpeech || '',
+      def: stripTags(d.definition),
+      zh: ''
+    });
+    if(!example){
+      for(const def of defs){
+        const ex = (def.parsedExamples || [])[0] || (def.examples || [])[0];
+        if(ex){ example = stripTags(typeof ex === 'string' ? ex : ex.example); break; }
+      }
+    }
+    if(senses.length >= 3) break;
+  }
+  if(!senses.length){ const e = new Error('notfound'); e.code = 404; throw e; }
+  return { phon:'', senses, example };
+}
+
+async function lookup(term){
+  try{ return await lookupPrimary(term); }
+  catch(e){ return await lookupWiktionary(term); }
 }
 
 async function fillWord(w){
