@@ -1,5 +1,5 @@
 /* 單字本 service worker：離線也能打開，字典 API 一律走網路 */
-const VERSION = 'vocab-v2';
+const VERSION = 'vocab-v3';
 const SHELL = [
   './',
   './index.html',
