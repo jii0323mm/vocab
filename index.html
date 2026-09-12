@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>單字本</title>
+<meta name="description" content="記下不會的英文單字，自動補上詞性、意思和例句，然後照間隔複習。">
+<link rel="manifest" href="./manifest.json">
+<meta name="theme-color" content="#FAFAF7">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="單字本">
+<link rel="apple-touch-icon" href="./apple-touch-icon.png">
+<link rel="icon" href="./favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#FAFAF7;
+  --card:#FFFFFF;
+  --ink:#15171C;
+  --graphite:#6A6F78;
+  --rule:#E6E5DE;
+  --mark:#FFE25C;
+  --mint:#8FE0BE;
+  --coral:#FF6B5A;
+  --r:14px;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif;
+  --serif:"Fraunces",Georgia,"Times New Roman",serif;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0}
+body{
+  background:var(--paper);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.55;
+  padding-bottom:calc(78px + env(safe-area-inset-bottom));
+  -webkit-font-smoothing:antialiased;
+}
+button{font-family:inherit;font-size:inherit;color:inherit;cursor:pointer}
+input,textarea{font-family:inherit;font-size:16px;color:inherit}
+:focus-visible{outline:2px solid var(--ink);outline-offset:2px;border-radius:4px}
+
+.wrap{max-width:620px;margin:0 auto;padding:0 16px}
+header{
+  position:sticky;top:0;z-index:20;background:var(--paper);
+  padding-top:calc(10px + env(safe-area-inset-top));
+  border-bottom:1px solid var(--rule);
+}
+.head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding-bottom:10px}
+.head h1{font-family:var(--serif);font-size:22px;font-weight:600;margin:0;letter-spacing:-.01em}
+.head .count{font-size:13px;color:var(--graphite);font-variant-numeric:tabular-nums}
+main{padding-top:18px}
+.view[hidden]{display:none}
+
+.adder{display:flex;gap:8px;margin-bottom:18px}
+.adder input{
+  flex:1;min-width:0;background:var(--card);border:1px solid var(--rule);
+  border-radius:var(--r);padding:14px 15px;font-family:var(--serif);font-size:19px;
+}
+.adder input::placeholder{font-family:var(--sans);font-size:15px;color:#9A9EA5}
+.adder button{
+  background:var(--ink);color:var(--paper);border:0;border-radius:var(--r);
+  padding:0 20px;font-weight:600;font-size:15px;flex:none;
+}
+.adder button:disabled{opacity:.4}
+
+.filters{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}
+.filters button{
+  background:transparent;border:1px solid var(--rule);border-radius:999px;
+  padding:5px 13px;font-size:13.5px;color:var(--graphite);
+}
+.filters button[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--paper)}
+
+.card{
+  background:var(--card);border:1px solid var(--rule);border-radius:var(--r);
+  padding:16px 16px 13px;margin-bottom:12px;
+}
+.card.flash{animation:flash .9s ease}
+@keyframes flash{0%,100%{background:var(--card)}30%{background:#FFF9DF}}
+
+.termline{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.termwrap{position:relative;display:inline-block;padding:0 2px}
+.marker{
+  position:absolute;left:-3px;right:-5px;top:.42em;bottom:.02em;
+  background:var(--mark);border-radius:3px 9px 4px 7px;
+  transform:rotate(-1.3deg) skewX(-9deg);transform-origin:left center;
+  z-index:0;
+}
+.term{position:relative;z-index:1;font-family:var(--serif);font-size:27px;font-weight:600;letter-spacing:-.015em;word-break:break-word}
+.speak{
+  flex:none;background:transparent;border:1px solid var(--rule);border-radius:999px;
+  width:36px;height:36px;display:grid;place-items:center;font-size:15px;color:var(--graphite);margin-top:2px;
+}
+.phon{font-family:var(--serif);font-size:14.5px;color:var(--graphite);margin-top:6px}
+
+.sense{margin-top:12px;padding-top:12px;border-top:1px dashed var(--rule)}
+.sense:first-of-type{border-top:0;padding-top:0}
+.pos{
+  display:inline-block;background:#F1F0EA;border-radius:5px;
+  padding:1px 7px;font-size:12.5px;color:var(--graphite);margin-right:7px;vertical-align:2px;
+}
+.zh{font-size:16.5px}
+.def{font-size:14px;color:var(--graphite);margin-top:4px;line-height:1.5}
+.ex{margin-top:10px;padding-left:11px;border-left:2px solid var(--mark)}
+.ex q{font-family:var(--serif);font-size:15.5px;font-style:italic;quotes:none;display:block}
+.ex .exzh{font-size:14px;color:var(--graphite);margin-top:2px}
+.note{margin-top:10px;font-size:14px;color:var(--graphite)}
+
+.meta{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:14px;padding-top:11px;border-top:1px solid var(--rule)}
+.dots{display:flex;gap:4px;align-items:center}
+.dot{width:7px;height:7px;border-radius:2px;background:var(--rule);transform:skewX(-9deg)}
+.dot.on{background:var(--mark)}
+.dot.full{background:var(--mint)}
+.due{font-size:12.5px;color:var(--graphite);margin-left:8px}
+.acts{display:flex;gap:4px}
+.acts button{background:transparent;border:0;padding:4px 8px;font-size:13px;color:var(--graphite)}
+.acts button.del:active{color:var(--coral)}
+
+.status{font-size:13px;color:var(--graphite);margin-top:8px}
+.status.err{color:var(--coral)}
+.retry{background:transparent;border:1px solid var(--rule);border-radius:8px;padding:3px 10px;font-size:13px;margin-left:6px}
+
+.editor{margin-top:12px;padding-top:12px;border-top:1px solid var(--rule);display:grid;gap:9px}
+.editor label{font-size:12.5px;color:var(--graphite)}
+.editor input,.editor textarea{
+  width:100%;background:var(--paper);border:1px solid var(--rule);border-radius:9px;
+  padding:9px 11px;resize:vertical;line-height:1.45;
+}
+.editor .row{display:flex;gap:8px;justify-content:flex-end;margin-top:2px}
+.editor .row button{border:1px solid var(--rule);background:transparent;border-radius:9px;padding:7px 15px;font-size:14px}
+.editor .row button.save{background:var(--ink);color:var(--paper);border-color:var(--ink);font-weight:600}
+
+.empty{text-align:center;padding:52px 20px;color:var(--graphite)}
+.empty .big{font-family:var(--serif);font-size:21px;color:var(--ink);margin-bottom:8px}
+.empty p{font-size:14.5px;margin:0;line-height:1.6}
+
+.rev-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;font-size:13px;color:var(--graphite)}
+.rev-bar{height:3px;background:var(--rule);border-radius:2px;overflow:hidden;flex:1;margin-left:14px}
+.rev-bar i{display:block;height:100%;background:var(--ink);transition:width .35s ease}
+.rcard{
+  background:var(--card);border:1px solid var(--rule);border-radius:var(--r);
+  padding:40px 20px;text-align:center;min-height:250px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+}
+.rcard .termwrap{margin-bottom:4px}
+.rcard .term{font-size:40px}
+.rcard .marker.wipe{animation:wipe .5s cubic-bezier(.5,0,.2,1) forwards}
+@keyframes wipe{to{transform:rotate(-1.3deg) skewX(-9deg) scaleX(0);opacity:0}}
+.answer{margin-top:20px;width:100%;max-width:420px;text-align:left}
+.reveal{
+  margin-top:26px;background:transparent;border:1px solid var(--rule);
+  border-radius:999px;padding:11px 26px;font-size:15px;color:var(--graphite);
+}
+.grade{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px}
+.grade button{border:1px solid var(--rule);background:var(--card);border-radius:12px;padding:14px 6px;font-size:14.5px;font-weight:500}
+.grade button.g2{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:22px}
+.stat{background:var(--card);border:1px solid var(--rule);border-radius:var(--r);padding:14px}
+.stat b{display:block;font-family:var(--serif);font-size:26px;font-weight:600;line-height:1.1}
+.stat span{font-size:12.5px;color:var(--graphite)}
+.block{background:var(--card);border:1px solid var(--rule);border-radius:var(--r);padding:16px;margin-bottom:12px}
+.block h2{font-size:15px;margin:0 0 6px;font-weight:600}
+.block p{font-size:14px;color:var(--graphite);margin:0 0 12px;line-height:1.6}
+.block p:last-child{margin-bottom:0}
+.btns{display:flex;gap:8px;flex-wrap:wrap}
+.btns button{border:1px solid var(--rule);background:var(--paper);border-radius:10px;padding:9px 16px;font-size:14px}
+.btns button.primary{background:var(--ink);color:var(--paper);border-color:var(--ink);font-weight:600}
+
+nav{
+  position:fixed;left:0;right:0;bottom:0;z-index:30;
+  background:rgba(250,250,247,.94);backdrop-filter:blur(12px);
+  border-top:1px solid var(--rule);
+  padding-bottom:env(safe-area-inset-bottom);
+}
+.navin{max-width:620px;margin:0 auto;display:grid;grid-template-columns:repeat(3,1fr)}
+nav button{background:transparent;border:0;padding:11px 0 12px;font-size:12.5px;color:var(--graphite);display:grid;gap:3px;justify-items:center}
+nav button .ico{font-size:19px;line-height:1}
+nav button[aria-current="page"]{color:var(--ink);font-weight:600}
+nav .badge{
+  position:absolute;transform:translate(14px,-4px);background:var(--coral);color:#fff;
+  border-radius:999px;font-size:10.5px;padding:0 5px;line-height:15px;height:15px;font-weight:600;
+}
+
+#toast{
+  position:fixed;left:50%;bottom:calc(92px + env(safe-area-inset-bottom));
+  transform:translate(-50%,10px);background:var(--ink);color:var(--paper);
+  padding:10px 18px;border-radius:999px;font-size:14px;z-index:50;
+  opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;max-width:90vw;text-align:center;
+}
+#toast.show{opacity:1;transform:translate(-50%,0)}
+
+.warnbar{background:#FFF4D6;border:1px solid #F0DFA8;border-radius:10px;padding:10px 13px;font-size:13.5px;margin-bottom:14px;color:#6b5a20}
+
+@media (prefers-reduced-motion:reduce){
+  *{animation-duration:.01ms !important;transition-duration:.01ms !important}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap head">
+    <h1>單字本</h1>
+    <span class="count" id="headcount"></span>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <section class="view" id="v-list">
+    <div id="storagewarn"></div>
+    <div class="adder">
+      <input id="newword" type="text" inputmode="text" autocapitalize="off" autocorrect="off"
+             spellcheck="false" placeholder="輸入不會的單字，按加入" enterkeyhint="done">
+      <button id="addbtn">加入</button>
+    </div>
+    <div class="filters">
+      <button data-f="all" aria-pressed="true">全部</button>
+      <button data-f="due" aria-pressed="false">待複習</button>
+      <button data-f="new" aria-pressed="false">還不熟</button>
+      <button data-f="done" aria-pressed="false">已熟</button>
+    </div>
+    <div id="listbody"></div>
+  </section>
+
+  <section class="view" id="v-review" hidden></section>
+
+  <section class="view" id="v-more" hidden>
+    <div class="stats" id="stats"></div>
+
+    <div class="block">
+      <h2>備份你的單字</h2>
+      <p>單字存在這支手機的瀏覽器裡，沒有雲端。換手機、清除瀏覽器資料都會不見，記得偶爾匯出一份。</p>
+      <div class="btns">
+        <button class="primary" id="exportbtn">匯出備份檔</button>
+        <button id="importbtn">從備份檔匯入</button>
+        <input type="file" id="importfile" accept="application/json,.json" hidden>
+      </div>
+    </div>
+
+    <div class="block">
+      <h2>加到手機桌面</h2>
+      <p>iPhone：用 Safari 打開這個網址，點下方分享鍵，選「加入主畫面」。</p>
+      <p>Android：用 Chrome 打開，點右上角選單，選「安裝應用程式」或「加到主畫面」。</p>
+      <div class="btns" id="installwrap" hidden>
+        <button class="primary" id="installbtn">直接安裝</button>
+      </div>
+    </div>
+
+    <div class="block">
+      <h2>資料從哪來</h2>
+      <p>英文解釋、詞性、例句和音標來自 Free Dictionary API，中文意思用 MyMemory 翻譯。查不到或翻得怪的時候，點單字卡上的「編輯」自己改，改完就是你自己的版本。</p>
+    </div>
+
+    <div class="block">
+      <h2>複習怎麼排</h2>
+      <p>答對一次隔 1 天再問你，接著是 2、4、7、15、30 天。答錯就退一級，10 分鐘後再出現。連續答對六次就算熟了，螢光筆也擦乾淨。</p>
+      <div class="btns">
+        <button id="clearbtn">清空全部單字</button>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<nav>
+  <div class="navin">
+    <button data-tab="list" aria-current="page"><span class="ico">✎</span>單字本</button>
+    <button data-tab="review"><span class="ico">◪</span>複習<span class="badge" id="navbadge" hidden></span></button>
+    <button data-tab="more"><span class="ico">⋯</span>更多</button>
+  </div>
+</nav>
+
+<div id="toast" role="status" aria-live="polite"></div>
+<script>
+(() => {
+'use strict';
+
+/* ========== 儲存 ========== */
+const KEY = 'vocab.v1';
+let memOnly = false;
+function load(){
+  try{
+    const raw = localStorage.getItem(KEY);
+    return raw ? JSON.parse(raw) : [];
+  }catch(e){ memOnly = true; return []; }
+}
+function save(){
+  if(memOnly) return;
+  try{ localStorage.setItem(KEY, JSON.stringify(words)); }
+  catch(e){ memOnly = true; toast('存不進去，瀏覽器空間可能滿了'); }
+}
+let words = load();
+
+/* ========== 複習排程 ========== */
+const STEPS = [1, 2, 4, 7, 15, 30];  // 答對後隔幾天再問
+const MAX = STEPS.length;            // 連對 6 次 = 熟
+const DAY = 86400000;
+const now = () => Date.now();
+const isDue = w => (w.due || 0) <= now();
+
+/* ========== 小工具 ========== */
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c =>
+  ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let toastTimer;
+function toast(msg){
+  const t = $('#toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer); toastTimer = setTimeout(()=>t.classList.remove('show'), 2200);
+}
+function dueText(w){
+  if(w.level >= MAX) return '已熟';
+  const d = (w.due||0) - now();
+  if(d <= 0) return '今天要複習';
+  if(d < DAY) return Math.max(1, Math.round(d/3600000)) + ' 小時後';
+  return Math.round(d/DAY) + ' 天後';
+}
+const POS = {
+  noun:'名詞', verb:'動詞', adjective:'形容詞', adverb:'副詞', pronoun:'代名詞',
+  preposition:'介系詞', conjunction:'連接詞', interjection:'感嘆詞',
+  determiner:'限定詞', numeral:'數詞', exclamation:'感嘆詞'
+};
+
+/* ========== 查字 ========== */
+async function translate(text){
+  if(!text) return '';
+  const url = 'https://api.mymemory.translated.net/get?q=' +
+              encodeURIComponent(text) + '&langpair=en|zh-TW';
+  const r = await fetch(url);
+  if(!r.ok) throw new Error('translate failed');
+  const j = await r.json();
+  let t = j?.responseData?.translatedText || '';
+  if(/NO QUERY SPECIFIED|MYMEMORY WARNING|INVALID/i.test(t)) t = '';
+  return t.trim();
+}
+
+async function lookup(term){
+  const r = await fetch('https://api.dictionaryapi.dev/api/v2/entries/en/' +
+                        encodeURIComponent(term));
+  if(r.status === 404) { const e = new Error('notfound'); e.code = 404; throw e; }
+  if(!r.ok) throw new Error('http ' + r.status);
+  const data = await r.json();
+  const entry = data[0] || {};
+
+  const phon = entry.phonetic ||
+    (entry.phonetics || []).map(p => p.text).find(Boolean) || '';
+
+  const senses = [];
+  let example = '';
+  for(const m of (entry.meanings || [])){
+    const d = (m.definitions || [])[0];
+    if(!d) continue;
+    senses.push({
+      pos: POS[m.partOfSpeech] || m.partOfSpeech || '',
+      def: d.definition || '',
+      zh: ''
+    });
+    if(!example){
+      const withEx = (m.definitions || []).find(x => x.example);
+      if(withEx) example = withEx.example;
+    }
+    if(senses.length >= 3) break;
+  }
+  return { phon, senses, example };
+}
+
+async function fillWord(w){
+  w.status = 'loading'; renderList();
+  try{
+    const got = await lookup(w.term);
+    w.phon = got.phon;
+    w.senses = got.senses;
+    w.example = got.example;
+    w.status = 'ok';
+    save(); renderList();
+
+    try{ w.zh = await translate(w.term); save(); renderList(); }catch(e){}
+    for(const s of w.senses){
+      try{ s.zh = await translate(s.def); save(); renderList(); }catch(e){ break; }
+    }
+    if(w.example){
+      try{ w.exampleZh = await translate(w.example); }catch(e){}
+    }
+    save(); renderList();
+  }catch(err){
+    w.status = err.code === 404 ? 'notfound' : 'error';
+    save(); renderList();
+  }
+}
+
+/* ========== 新增 ========== */
+function addWord(raw){
+  const term = raw.trim().replace(/\s+/g,' ');
+  if(!term) return;
+  const dup = words.find(w => w.term.toLowerCase() === term.toLowerCase());
+  if(dup){
+    toast('這個字已經在單字本裡了');
+    renderList();
+    const el = document.querySelector('[data-id="'+dup.id+'"]');
+    if(el){ el.classList.add('flash'); el.scrollIntoView({block:'center',behavior:'smooth'});
+            setTimeout(()=>el.classList.remove('flash'), 1000); }
+    return;
+  }
+  const w = {
+    id: 'w' + now().toString(36) + Math.random().toString(36).slice(2,6),
+    term, phon:'', zh:'', senses:[], example:'', exampleZh:'', note:'',
+    level:0, due:now(), created:now(), status:'loading'
+  };
+  words.unshift(w); save(); renderList();
+  fillWord(w);
+}
+
+function speak(term){
+  try{
+    const u = new SpeechSynthesisUtterance(term);
+    u.lang = 'en-US'; u.rate = .9;
+    speechSynthesis.cancel(); speechSynthesis.speak(u);
+  }catch(e){ toast('這台裝置沒辦法發音'); }
+}
+
+/* ========== 單字卡 ========== */
+function markerStyle(w){
+  const p = Math.min(w.level, MAX) / MAX;
+  const op = (1 - p * 0.82).toFixed(2);
+  const col = w.level >= MAX ? 'var(--mint)' : 'var(--mark)';
+  return `opacity:${op};background:${col}`;
+}
+function dotsHtml(w){
+  let h = '<div class="dots">';
+  for(let i=0;i<MAX;i++){
+    const cls = w.level >= MAX ? 'dot full' : (i < w.level ? 'dot on' : 'dot');
+    h += `<i class="${cls}"></i>`;
+  }
+  h += `<span class="due">${esc(dueText(w))}</span></div>`;
+  return h;
+}
+function sensesHtml(w){
+  if(!w.senses || !w.senses.length) return '';
+  return w.senses.map(s => `
+    <div class="sense">
+      ${s.pos ? `<span class="pos">${esc(s.pos)}</span>` : ''}
+      <span class="zh">${esc(s.zh || '（點編輯補中文）')}</span>
+      ${s.def ? `<div class="def">${esc(s.def)}</div>` : ''}
+    </div>`).join('');
+}
+function cardHtml(w){
+  const editing = editId === w.id;
+  let body = '';
+  if(w.status === 'loading'){
+    body = `<div class="status">查詢中…</div>`;
+  }else if(w.status === 'notfound'){
+    body = `<div class="status err">字典查不到這個字，確認一下拼字，或自己填。
+              <button class="retry" data-act="retry" data-id="${w.id}">重查</button></div>`;
+  }else if(w.status === 'error'){
+    body = `<div class="status err">連不上字典，可能是沒網路。
+              <button class="retry" data-act="retry" data-id="${w.id}">重試</button></div>`;
+  }else{
+    body = sensesHtml(w);
+  }
+
+  const ex = w.example ? `
+    <div class="ex">
+      <q>${esc(w.example)}</q>
+      ${w.exampleZh ? `<div class="exzh">${esc(w.exampleZh)}</div>` : ''}
+    </div>` : '';
+
+  const note = w.note ? `<div class="note">筆記：${esc(w.note)}</div>` : '';
+
+  const editor = editing ? `
+    <div class="editor">
+      <div><label for="e-zh-${w.id}">中文意思</label>
+        <input id="e-zh-${w.id}" data-e="zh" value="${esc(w.zh)}"></div>
+      <div><label for="e-ex-${w.id}">例句</label>
+        <textarea id="e-ex-${w.id}" data-e="example" rows="2">${esc(w.example)}</textarea></div>
+      <div><label for="e-exzh-${w.id}">例句中文</label>
+        <textarea id="e-exzh-${w.id}" data-e="exampleZh" rows="2">${esc(w.exampleZh)}</textarea></div>
+      <div><label for="e-note-${w.id}">自己的筆記</label>
+        <textarea id="e-note-${w.id}" data-e="note" rows="2" placeholder="哪裡看到的、怎麼記、跟哪個字容易搞混…">${esc(w.note)}</textarea></div>
+      <div class="row">
+        <button data-act="canceledit">取消</button>
+        <button class="save" data-act="saveedit" data-id="${w.id}">儲存</button>
+      </div>
+    </div>` : '';
+
+  return `
+  <article class="card" data-id="${w.id}">
+    <div class="termline">
+      <div>
+        <span class="termwrap"><i class="marker" style="${markerStyle(w)}"></i><span class="term">${esc(w.term)}</span></span>
+        ${(w.phon || w.zh) ? `<div class="phon">${[w.phon, w.zh].filter(Boolean).map(esc).join(' · ')}</div>` : ''}
+      </div>
+      <button class="speak" data-act="speak" data-id="${w.id}" aria-label="唸出 ${esc(w.term)}">♪</button>
+    </div>
+    ${body}
+    ${ex}
+    ${note}
+    ${editor}
+    <div class="meta">
+      ${dotsHtml(w)}
+      <div class="acts">
+        <button data-act="edit" data-id="${w.id}">編輯</button>
+        <button class="del" data-act="del" data-id="${w.id}">刪除</button>
+      </div>
+    </div>
+  </article>`;
+}
+
+/* ========== 清單 ========== */
+let filter = 'all', editId = null;
+function filtered(){
+  if(filter === 'due')  return words.filter(isDue).filter(w => w.level < MAX);
+  if(filter === 'new')  return words.filter(w => w.level < 3);
+  if(filter === 'done') return words.filter(w => w.level >= MAX);
+  return words;
+}
+function renderList(){
+  const list = filtered();
+  const box = $('#listbody');
+  if(!words.length){
+    box.innerHTML = `<div class="empty">
+      <div class="big">還沒有單字</div>
+      <p>看到不會的字就丟進上面那格。<br>詞性、意思、例句我會自動補上。</p></div>`;
+  }else if(!list.length){
+    box.innerHTML = `<div class="empty"><p>這個分類目前是空的。</p></div>`;
+  }else{
+    box.innerHTML = list.map(cardHtml).join('');
+  }
+  renderCounts();
+}
+function renderCounts(){
+  const due = words.filter(w => isDue(w) && w.level < MAX).length;
+  $('#headcount').textContent = words.length
+    ? words.length + ' 個字' + (due ? ' · ' + due + ' 個待複習' : '') : '';
+  const b = $('#navbadge');
+  b.hidden = !due; b.textContent = due > 99 ? '99+' : due;
+}
+
+/* ========== 複習 ========== */
+let queue = [], qi = 0, revealed = false, extra = false;
+function buildQueue(){
+  queue = words.filter(w => isDue(w) && w.level < MAX)
+               .sort((a,b) => (a.due||0) - (b.due||0));
+  qi = 0; revealed = false; extra = false;
+}
+function renderReview(){
+  const v = $('#v-review');
+  if(qi >= queue.length){
+    const total = words.length;
+    v.innerHTML = total ? `<div class="empty">
+        <div class="big">${extra ? '練完了' : '今天複習完了'}</div>
+        <p>下一批單字到時間就會出現在這裡。</p>
+        <div class="btns" style="justify-content:center;margin-top:18px">
+          <button id="practice">隨機再練 10 個</button></div>
+      </div>` : `<div class="empty">
+        <div class="big">沒有東西可以複習</div>
+        <p>先去單字本加幾個字。</p></div>`;
+    const p = $('#practice');
+    if(p) p.onclick = () => {
+      queue = [...words].sort(()=>Math.random()-.5).slice(0,10);
+      qi = 0; revealed = false; extra = true; renderReview();
+    };
+    return;
+  }
+  const w = queue[qi];
+  const pct = Math.round(qi / queue.length * 100);
+  v.innerHTML = `
+    <div class="rev-top"><span>${qi+1} / ${queue.length}</span>
+      <span class="rev-bar"><i style="width:${pct}%"></i></span></div>
+    <div class="rcard">
+      <span class="termwrap"><i class="marker" id="revmark" style="${markerStyle(w)}"></i><span class="term">${esc(w.term)}</span></span>
+      ${revealed && w.phon ? `<div class="phon">${esc(w.phon)}</div>` : ''}
+      ${revealed ? `<div class="answer">
+          ${w.zh ? `<div class="zh" style="font-size:18px;margin-bottom:6px">${esc(w.zh)}</div>` : ''}
+          ${sensesHtml(w)}
+          ${w.example ? `<div class="ex"><q>${esc(w.example)}</q>
+            ${w.exampleZh?`<div class="exzh">${esc(w.exampleZh)}</div>`:''}</div>` : ''}
+          ${w.note ? `<div class="note">筆記：${esc(w.note)}</div>` : ''}
+        </div>` : `<button class="reveal" id="revealbtn">看答案</button>`}
+    </div>
+    ${revealed ? `<div class="grade">
+      <button data-g="0">想不起來</button>
+      <button data-g="1">有點模糊</button>
+      <button class="g2" data-g="2">記得</button>
+    </div>` : `<div class="grade"><button style="grid-column:1/-1" data-act="speakrev">唸一次給我聽</button></div>`}
+  `;
+  const rb = $('#revealbtn');
+  if(rb) rb.onclick = () => { revealed = true; renderReview(); };
+  v.querySelectorAll('[data-g]').forEach(b => b.onclick = () => grade(+b.dataset.g));
+  const sp = v.querySelector('[data-act="speakrev"]');
+  if(sp) sp.onclick = () => speak(w.term);
+}
+function grade(g){
+  const w = queue[qi];
+  if(g === 2){
+    w.level = Math.min(MAX, w.level + 1);
+    w.due = now() + STEPS[Math.min(w.level, STEPS.length) - 1] * DAY;
+  }else if(g === 1){
+    w.due = now() + DAY;
+  }else{
+    w.level = Math.max(0, w.level - 1);
+    w.due = now() + 10 * 60000;
+  }
+  save();
+  const m = $('#revmark');
+  const go = () => { qi++; revealed = false; renderReview(); renderCounts(); renderList(); };
+  if(g === 2 && m && !matchMedia('(prefers-reduced-motion: reduce)').matches){
+    m.classList.add('wipe'); setTimeout(go, 340);
+  }else go();
+}
+
+/* ========== 更多 ========== */
+function renderMore(){
+  const due  = words.filter(w => isDue(w) && w.level < MAX).length;
+  const done = words.filter(w => w.level >= MAX).length;
+  $('#stats').innerHTML =
+    '<div class="stat"><b>' + words.length + '</b><span>收錄單字</span></div>' +
+    '<div class="stat"><b>' + due + '</b><span>待複習</span></div>' +
+    '<div class="stat"><b>' + done + '</b><span>已經熟了</span></div>';
+}
+
+/* ========== 分頁 ========== */
+function go(tab){
+  ['list','review','more'].forEach(t => $('#v-'+t).hidden = (t !== tab));
+  document.querySelectorAll('nav button').forEach(b =>
+    b.dataset.tab === tab ? b.setAttribute('aria-current','page') : b.removeAttribute('aria-current'));
+  if(tab === 'review'){ buildQueue(); renderReview(); }
+  if(tab === 'more') renderMore();
+  if(tab === 'list') renderList();
+  window.scrollTo(0,0);
+}
+document.querySelectorAll('nav button').forEach(b => b.onclick = () => go(b.dataset.tab));
+
+/* ========== 事件 ========== */
+$('#addbtn').onclick = () => { addWord($('#newword').value); $('#newword').value=''; };
+$('#newword').addEventListener('keydown', e => {
+  if(e.key === 'Enter'){ e.preventDefault(); $('#addbtn').click(); }
+});
+document.querySelectorAll('.filters button').forEach(b => b.onclick = () => {
+  filter = b.dataset.f;
+  document.querySelectorAll('.filters button').forEach(x =>
+    x.setAttribute('aria-pressed', String(x === b)));
+  renderList();
+});
+$('#listbody').addEventListener('click', e => {
+  const btn = e.target.closest('[data-act]'); if(!btn) return;
+  const id = btn.dataset.id, w = words.find(x => x.id === id);
+  switch(btn.dataset.act){
+    case 'speak': speak(w.term); break;
+    case 'retry': fillWord(w); break;
+    case 'edit': editId = (editId === id ? null : id); renderList(); break;
+    case 'canceledit': editId = null; renderList(); break;
+    case 'del':
+      if(confirm('把「' + w.term + '」從單字本刪掉？')){
+        words = words.filter(x => x.id !== id); save(); renderList();
+      }
+      break;
+    case 'saveedit': {
+      const card = btn.closest('.card');
+      card.querySelectorAll('[data-e]').forEach(f => { w[f.dataset.e] = f.value.trim(); });
+      if(w.status !== 'ok' && (w.zh || w.example)) w.status = 'ok';
+      editId = null; save(); renderList(); toast('改好了');
+      break;
+    }
+  }
+});
+
+/* 匯出 / 匯入 */
+$('#exportbtn').onclick = () => {
+  const blob = new Blob([JSON.stringify({app:'vocab', v:1, at:new Date().toISOString(), words}, null, 2)],
+                        {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = '單字本備份-' + new Date().toISOString().slice(0,10) + '.json';
+  a.click(); setTimeout(()=>URL.revokeObjectURL(a.href), 1000);
+};
+$('#importbtn').onclick = () => $('#importfile').click();
+$('#importfile').onchange = async e => {
+  const f = e.target.files[0]; if(!f) return;
+  try{
+    const j = JSON.parse(await f.text());
+    const incoming = Array.isArray(j) ? j : j.words;
+    if(!Array.isArray(incoming)) throw new Error('bad');
+    let added = 0;
+    for(const w of incoming){
+      if(!w || !w.term) continue;
+      if(words.some(x => x.term.toLowerCase() === String(w.term).toLowerCase())) continue;
+      words.push(Object.assign({
+        id:'w'+Math.random().toString(36).slice(2,10), phon:'', zh:'', senses:[],
+        example:'', exampleZh:'', note:'', level:0, due:now(), created:now(), status:'ok'
+      }, w));
+      added++;
+    }
+    save(); renderList(); renderMore();
+    toast(added ? ('匯入 ' + added + ' 個新單字') : '沒有新的單字可以加');
+  }catch(err){ toast('這個檔案讀不出來'); }
+  e.target.value = '';
+};
+$('#clearbtn').onclick = () => {
+  if(!words.length) return toast('本來就是空的');
+  if(confirm('刪掉全部 ' + words.length + ' 個單字？這個動作救不回來。')){
+    words = []; save(); renderList(); renderMore(); toast('清空了');
+  }
+};
+
+/* 安裝提示（Android / 桌面 Chrome） */
+let deferred = null;
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault(); deferred = e; $('#installwrap').hidden = false;
+});
+$('#installbtn').onclick = async () => {
+  if(!deferred) return;
+  deferred.prompt(); await deferred.userChoice;
+  deferred = null; $('#installwrap').hidden = true;
+};
+
+/* ========== 啟動 ========== */
+if(memOnly){
+  $('#storagewarn').innerHTML =
+    '<div class="warnbar">這個瀏覽器不讓網頁存資料（可能是無痕模式），單字關掉就會不見。</div>';
+}
+renderList();
+
+if('serviceWorker' in navigator){
+  window.addEventListener('load', () =>
+    navigator.serviceWorker.register('./sw.js').catch(()=>{}));
+}
+})();
+</script>
+</body>
+</html>
