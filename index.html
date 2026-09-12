@@ -41,6 +41,7 @@ button{font-family:inherit;font-size:inherit;color:inherit;cursor:pointer}
 input,textarea{font-family:inherit;font-size:16px;color:inherit}
 :focus-visible{outline:2px solid var(--ink);outline-offset:2px;border-radius:4px}
 
+/* ---------- shell ---------- */
 .wrap{max-width:620px;margin:0 auto;padding:0 16px}
 header{
   position:sticky;top:0;z-index:20;background:var(--paper);
@@ -53,6 +54,7 @@ header{
 main{padding-top:18px}
 .view[hidden]{display:none}
 
+/* ---------- add box ---------- */
 .adder{display:flex;gap:8px;margin-bottom:18px}
 .adder input{
   flex:1;min-width:0;background:var(--card);border:1px solid var(--rule);
@@ -65,6 +67,7 @@ main{padding-top:18px}
 }
 .adder button:disabled{opacity:.4}
 
+/* ---------- filters ---------- */
 .filters{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}
 .filters button{
   background:transparent;border:1px solid var(--rule);border-radius:999px;
@@ -72,6 +75,7 @@ main{padding-top:18px}
 }
 .filters button[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--paper)}
 
+/* ---------- word card ---------- */
 .card{
   background:var(--card);border:1px solid var(--rule);border-radius:var(--r);
   padding:16px 16px 13px;margin-bottom:12px;
@@ -121,6 +125,7 @@ main{padding-top:18px}
 .status.err{color:var(--coral)}
 .retry{background:transparent;border:1px solid var(--rule);border-radius:8px;padding:3px 10px;font-size:13px;margin-left:6px}
 
+/* ---------- editor ---------- */
 .editor{margin-top:12px;padding-top:12px;border-top:1px solid var(--rule);display:grid;gap:9px}
 .editor label{font-size:12.5px;color:var(--graphite)}
 .editor input,.editor textarea{
@@ -131,10 +136,12 @@ main{padding-top:18px}
 .editor .row button{border:1px solid var(--rule);background:transparent;border-radius:9px;padding:7px 15px;font-size:14px}
 .editor .row button.save{background:var(--ink);color:var(--paper);border-color:var(--ink);font-weight:600}
 
+/* ---------- empty ---------- */
 .empty{text-align:center;padding:52px 20px;color:var(--graphite)}
 .empty .big{font-family:var(--serif);font-size:21px;color:var(--ink);margin-bottom:8px}
 .empty p{font-size:14.5px;margin:0;line-height:1.6}
 
+/* ---------- review ---------- */
 .rev-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;font-size:13px;color:var(--graphite)}
 .rev-bar{height:3px;background:var(--rule);border-radius:2px;overflow:hidden;flex:1;margin-left:14px}
 .rev-bar i{display:block;height:100%;background:var(--ink);transition:width .35s ease}
@@ -156,6 +163,7 @@ main{padding-top:18px}
 .grade button{border:1px solid var(--rule);background:var(--card);border-radius:12px;padding:14px 6px;font-size:14.5px;font-weight:500}
 .grade button.g2{background:var(--ink);color:var(--paper);border-color:var(--ink)}
 
+/* ---------- more ---------- */
 .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:22px}
 .stat{background:var(--card);border:1px solid var(--rule);border-radius:var(--r);padding:14px}
 .stat b{display:block;font-family:var(--serif);font-size:26px;font-weight:600;line-height:1.1}
@@ -168,6 +176,7 @@ main{padding-top:18px}
 .btns button{border:1px solid var(--rule);background:var(--paper);border-radius:10px;padding:9px 16px;font-size:14px}
 .btns button.primary{background:var(--ink);color:var(--paper);border-color:var(--ink);font-weight:600}
 
+/* ---------- nav ---------- */
 nav{
   position:fixed;left:0;right:0;bottom:0;z-index:30;
   background:rgba(250,250,247,.94);backdrop-filter:blur(12px);
@@ -183,6 +192,7 @@ nav .badge{
   border-radius:999px;font-size:10.5px;padding:0 5px;line-height:15px;height:15px;font-weight:600;
 }
 
+/* ---------- toast ---------- */
 #toast{
   position:fixed;left:50%;bottom:calc(92px + env(safe-area-inset-bottom));
   transform:translate(-50%,10px);background:var(--ink);color:var(--paper);
@@ -192,6 +202,38 @@ nav .badge{
 #toast.show{opacity:1;transform:translate(-50%,0)}
 
 .warnbar{background:#FFF4D6;border:1px solid #F0DFA8;border-radius:10px;padding:10px 13px;font-size:13.5px;margin-bottom:14px;color:#6b5a20}
+
+.adderwrap{position:relative;margin-bottom:18px}
+.adderwrap .adder{margin-bottom:0}
+.sugs{
+  position:absolute;left:0;right:0;top:calc(100% + 6px);z-index:40;
+  background:var(--card);border:1px solid var(--rule);border-radius:12px;
+  overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,.07);
+}
+.sugs button{
+  display:block;width:100%;text-align:left;background:transparent;border:0;
+  border-bottom:1px solid var(--rule);padding:12px 15px;
+  font-family:var(--serif);font-size:17px;
+}
+.sugs button:last-child{border-bottom:0}
+.sugs button.sel,.sugs button:hover{background:#F6F5F0}
+
+.forms{display:flex;flex-wrap:wrap;gap:6px;margin-top:11px}
+.forms span{background:#F1F0EA;border-radius:6px;padding:2px 9px;font-size:13px;color:var(--graphite)}
+.forms span b{font-family:var(--serif);font-weight:600;color:var(--ink);margin-left:6px}
+
+.keyrow{display:flex;gap:8px;margin-bottom:9px}
+.keyrow input{
+  flex:1;min-width:0;background:var(--paper);border:1px solid var(--rule);
+  border-radius:10px;padding:10px 12px;font-size:14px;
+}
+.keyrow button{
+  flex:none;background:var(--ink);color:var(--paper);border:1px solid var(--ink);
+  border-radius:10px;padding:9px 17px;font-size:14px;font-weight:600;
+}
+.keystate{font-size:13px;margin-top:9px;color:var(--graphite);line-height:1.5}
+.keystate.ok{color:#2E7D5B}
+.keystate.bad{color:var(--coral)}
 
 @media (prefers-reduced-motion:reduce){
   *{animation-duration:.01ms !important;transition-duration:.01ms !important}
@@ -209,12 +251,16 @@ nav .badge{
 
 <main class="wrap">
 
+  <!-- ============ 單字本 ============ -->
   <section class="view" id="v-list">
     <div id="storagewarn"></div>
-    <div class="adder">
-      <input id="newword" type="text" inputmode="text" autocapitalize="off" autocorrect="off"
-             spellcheck="false" placeholder="輸入不會的單字，按加入" enterkeyhint="done">
-      <button id="addbtn">加入</button>
+    <div class="adderwrap">
+      <div class="adder">
+        <input id="newword" type="text" inputmode="text" autocapitalize="off" autocorrect="off"
+               spellcheck="false" autocomplete="off" placeholder="輸入不會的單字，按加入" enterkeyhint="done">
+        <button id="addbtn">加入</button>
+      </div>
+      <div class="sugs" id="sugs" hidden></div>
     </div>
     <div class="filters">
       <button data-f="all" aria-pressed="true">全部</button>
@@ -225,8 +271,10 @@ nav .badge{
     <div id="listbody"></div>
   </section>
 
+  <!-- ============ 複習 ============ -->
   <section class="view" id="v-review" hidden></section>
 
+  <!-- ============ 更多 ============ -->
   <section class="view" id="v-more" hidden>
     <div class="stats" id="stats"></div>
 
@@ -250,8 +298,26 @@ nav .badge{
     </div>
 
     <div class="block">
+      <h2>用 Gemini 查單字</h2>
+      <p>貼上你自己的 Gemini API 金鑰，查詢會快很多，而且一次就拿到繁體意思、所有詞性、詞形變化和例句。金鑰只存在這台裝置的瀏覽器裡，不會上傳到 GitHub。</p>
+      <div class="keyrow">
+        <input id="gemkey" type="password" autocomplete="off" placeholder="貼上 Gemini API 金鑰">
+        <button id="savekey">儲存</button>
+      </div>
+      <div class="keyrow">
+        <input id="gemmodel" type="text" autocomplete="off" spellcheck="false" placeholder="gemini-3.5-flash">
+      </div>
+      <div class="btns">
+        <button id="testkey">測試金鑰</button>
+        <button id="clearkey">清除金鑰</button>
+      </div>
+      <div class="keystate" id="keystate"></div>
+      <p style="margin-top:12px">還沒有金鑰的話，到 <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Google AI Studio</a> 免費申請一把。建議開一把專用的，外洩了直接砍掉重發。</p>
+    </div>
+
+    <div class="block">
       <h2>資料從哪來</h2>
-      <p>英文解釋、詞性、例句和音標來自 Free Dictionary API，那邊查不到或連不上就改用 Wiktionary；中文意思用 MyMemory 翻譯。查不到或翻得怪的時候，點單字卡上的「編輯」自己改，改完就是你自己的版本。</p>
+      <p>設了金鑰就走 Gemini。沒設的話，英文解釋和詞性來自 Free Dictionary API，連不上就改用 Wiktionary，中文是 MyMemory 翻完再轉成繁體。翻得怪的時候點單字卡上的「編輯」自己改，改完就是你自己的版本。</p>
     </div>
 
     <div class="block">
@@ -274,6 +340,7 @@ nav .badge{
 </nav>
 
 <div id="toast" role="status" aria-live="polite"></div>
+
 <script>
 (() => {
 'use strict';
@@ -293,6 +360,33 @@ function save(){
   catch(e){ memOnly = true; toast('存不進去，瀏覽器空間可能滿了'); }
 }
 let words = load();
+
+/* ========== 設定（Gemini 金鑰只存在這台裝置） ========== */
+const DEFAULT_MODEL = 'gemini-3.5-flash';
+const SKEY = 'vocab.settings.v1';
+let settings = { key:'', model: DEFAULT_MODEL };
+let lastGeminiError = '';
+try{ Object.assign(settings, JSON.parse(localStorage.getItem(SKEY) || '{}')); }catch(e){}
+function saveSettings(){ try{ localStorage.setItem(SKEY, JSON.stringify(settings)); }catch(e){} }
+
+/* 簡轉繁：備援路線翻回來的中文可能是簡體，統一轉成台灣繁體 */
+let s2t = null, s2tTried = false;
+async function zhText(s){
+  if(!s) return s;
+  if(!s2tTried){
+    s2tTried = true;
+    try{
+      await new Promise((res, rej) => {
+        const sc = document.createElement('script');
+        sc.src = 'https://cdn.jsdelivr.net/npm/opencc-js@1.0.5/dist/umd/cn2t.js';
+        sc.onload = res; sc.onerror = rej;
+        document.head.appendChild(sc);
+      });
+      s2t = OpenCC.Converter({ from:'cn', to:'tw' });
+    }catch(e){ s2t = null; }
+  }
+  try{ return s2t ? s2t(s) : s; }catch(e){ return s; }
+}
 
 /* ========== 複習排程 ========== */
 const STEPS = [1, 2, 4, 7, 15, 30];  // 答對後隔幾天再問
@@ -345,7 +439,7 @@ const stripTags = h => {
   return (d.textContent || '').replace(/\s+/g,' ').trim();
 };
 
-// 主要來源：Free Dictionary API（有音標和例句）
+// 備援一：Free Dictionary API（有音標和例句）
 async function lookupPrimary(term){
   const r = await withTimeout(
     fetch('https://api.dictionaryapi.dev/api/v2/entries/en/' + encodeURIComponent(term)), 7000);
@@ -374,7 +468,7 @@ async function lookupPrimary(term){
   return { phon, senses, example };
 }
 
-// 備援：Wiktionary（主要 API 掛掉或查不到時用）
+// 備援二：Wiktionary
 async function lookupWiktionary(term){
   const r = await withTimeout(
     fetch('https://en.wiktionary.org/api/rest_v1/page/definition/' +
@@ -405,7 +499,70 @@ async function lookupWiktionary(term){
   return { phon:'', senses, example };
 }
 
+// 首選：Gemini，一次回繁體意思、所有詞性、詞形變化、例句
+async function lookupGemini(term){
+  const model = (settings.model || DEFAULT_MODEL).trim();
+  const prompt =
+    '你是一本英漢辭典。請針對英文單字「' + term + '」輸出辭典資料。' +
+    '所有中文一律使用台灣繁體中文，絕對不可以出現任何簡體字。' +
+    'zh 欄位是最常見的中文意思，十個字以內。' +
+    'senses 每個詞性各一筆，最多四筆，pos 用中文詞性名稱（名詞、動詞、形容詞、副詞、介系詞…），' +
+    'zh 是該詞性的中文解釋，def 是對應的英文解釋。' +
+    'forms 是詞形變化：動詞給過去式、過去分詞、現在分詞；名詞給複數；形容詞給比較級、最高級；' +
+    '沒有變化就回空陣列。label 用中文，value 是變化後的英文。' +
+    'phon 是 KK 或 IPA 音標。example 是一句自然的英文例句，exampleZh 是它的繁體中文翻譯。';
+  const responseSchema = {
+    type:'object',
+    properties:{
+      phon:{type:'string'},
+      zh:{type:'string'},
+      senses:{type:'array', items:{type:'object', properties:{
+        pos:{type:'string'}, zh:{type:'string'}, def:{type:'string'}
+      }, required:['pos','zh']}},
+      forms:{type:'array', items:{type:'object', properties:{
+        label:{type:'string'}, value:{type:'string'}
+      }, required:['label','value']}},
+      example:{type:'string'},
+      exampleZh:{type:'string'}
+    },
+    required:['zh','senses']
+  };
+  const r = await withTimeout(fetch(
+    'https://generativelanguage.googleapis.com/v1beta/models/' +
+    encodeURIComponent(model) + ':generateContent',
+    {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json', 'x-goog-api-key': settings.key },
+      body: JSON.stringify({
+        contents:[{ parts:[{ text: prompt }] }],
+        generationConfig:{ responseMimeType:'application/json', responseSchema, temperature:0.2 }
+      })
+    }), 20000);
+  if(!r.ok){
+    let msg = 'HTTP ' + r.status;
+    try{ const j = await r.json(); if(j.error && j.error.message) msg = j.error.message; }catch(x){}
+    throw new Error(msg);
+  }
+  const j = await r.json();
+  const cand = (j.candidates || [])[0] || {};
+  const txt = ((cand.content || {}).parts || []).map(p => p.text || '').join('');
+  const d = JSON.parse(txt);
+  const senses = (d.senses || []).slice(0,4).map(s => ({
+    pos: s.pos || '', zh: s.zh || '', def: s.def || ''
+  })).filter(s => s.zh || s.def);
+  if(!senses.length) throw new Error('empty');
+  return {
+    phon: d.phon || '', zh: d.zh || '', senses,
+    forms: (d.forms || []).slice(0,6).filter(f => f && f.label && f.value),
+    example: d.example || '', exampleZh: d.exampleZh || ''
+  };
+}
+
 async function lookup(term){
+  if(settings.key){
+    try{ return await lookupGemini(term); }
+    catch(e){ lastGeminiError = e.message; }
+  }
   try{ return await lookupPrimary(term); }
   catch(e){ return await lookupWiktionary(term); }
 }
@@ -417,15 +574,22 @@ async function fillWord(w){
     w.phon = got.phon;
     w.senses = got.senses;
     w.example = got.example;
+    w.forms = got.forms || [];
+    if(got.zh) w.zh = got.zh;
+    if(got.exampleZh) w.exampleZh = got.exampleZh;
     w.status = 'ok';
     save(); renderList();
 
-    try{ w.zh = await translate(w.term); save(); renderList(); }catch(e){}
-    for(const s of w.senses){
-      try{ s.zh = await translate(s.def); save(); renderList(); }catch(e){ break; }
+    // 中文：先翻單字，再翻各詞性的解釋，最後翻例句
+    if(!w.zh){
+      try{ w.zh = await zhText(await translate(w.term)); save(); renderList(); }catch(e){}
     }
-    if(w.example){
-      try{ w.exampleZh = await translate(w.example); }catch(e){}
+    for(const s of w.senses){
+      if(s.zh) continue;
+      try{ s.zh = await zhText(await translate(s.def)); save(); renderList(); }catch(e){ break; }
+    }
+    if(w.example && !w.exampleZh){
+      try{ w.exampleZh = await zhText(await translate(w.example)); }catch(e){}
     }
     save(); renderList();
   }catch(err){
@@ -466,6 +630,7 @@ function speak(term){
 
 /* ========== 單字卡 ========== */
 function markerStyle(w){
+  // 越熟，螢光筆越淡；熟了就變成薄薄的薄荷色
   const p = Math.min(w.level, MAX) / MAX;
   const op = (1 - p * 0.82).toFixed(2);
   const col = w.level >= MAX ? 'var(--mint)' : 'var(--mark)';
@@ -479,6 +644,11 @@ function dotsHtml(w){
   }
   h += `<span class="due">${esc(dueText(w))}</span></div>`;
   return h;
+}
+function formsHtml(w){
+  if(!w.forms || !w.forms.length) return '';
+  return '<div class="forms">' + w.forms.map(f =>
+    '<span>' + esc(f.label) + '<b>' + esc(f.value) + '</b></span>').join('') + '</div>';
 }
 function sensesHtml(w){
   if(!w.senses || !w.senses.length) return '';
@@ -538,6 +708,7 @@ function cardHtml(w){
       <button class="speak" data-act="speak" data-id="${w.id}" aria-label="唸出 ${esc(w.term)}">♪</button>
     </div>
     ${body}
+    ${formsHtml(w)}
     ${ex}
     ${note}
     ${editor}
@@ -576,7 +747,7 @@ function renderList(){
 function renderCounts(){
   const due = words.filter(w => isDue(w) && w.level < MAX).length;
   $('#headcount').textContent = words.length
-    ? words.length + ' 個字' + (due ? ' · ' + due + ' 個待複習' : '') : '';
+    ? `${words.length} 個字${due ? ` · ${due} 個待複習` : ''}` : '';
   const b = $('#navbadge');
   b.hidden = !due; b.textContent = due > 99 ? '99+' : due;
 }
@@ -618,6 +789,7 @@ function renderReview(){
       ${revealed ? `<div class="answer">
           ${w.zh ? `<div class="zh" style="font-size:18px;margin-bottom:6px">${esc(w.zh)}</div>` : ''}
           ${sensesHtml(w)}
+          ${formsHtml(w)}
           ${w.example ? `<div class="ex"><q>${esc(w.example)}</q>
             ${w.exampleZh?`<div class="exzh">${esc(w.exampleZh)}</div>`:''}</div>` : ''}
           ${w.note ? `<div class="note">筆記：${esc(w.note)}</div>` : ''}
@@ -658,10 +830,10 @@ function grade(g){
 function renderMore(){
   const due  = words.filter(w => isDue(w) && w.level < MAX).length;
   const done = words.filter(w => w.level >= MAX).length;
-  $('#stats').innerHTML =
-    '<div class="stat"><b>' + words.length + '</b><span>收錄單字</span></div>' +
-    '<div class="stat"><b>' + due + '</b><span>待複習</span></div>' +
-    '<div class="stat"><b>' + done + '</b><span>已經熟了</span></div>';
+  $('#stats').innerHTML = `
+    <div class="stat"><b>${words.length}</b><span>收錄單字</span></div>
+    <div class="stat"><b>${due}</b><span>待複習</span></div>
+    <div class="stat"><b>${done}</b><span>已經熟了</span></div>`;
 }
 
 /* ========== 分頁 ========== */
@@ -670,7 +842,7 @@ function go(tab){
   document.querySelectorAll('nav button').forEach(b =>
     b.dataset.tab === tab ? b.setAttribute('aria-current','page') : b.removeAttribute('aria-current'));
   if(tab === 'review'){ buildQueue(); renderReview(); }
-  if(tab === 'more') renderMore();
+  if(tab === 'more'){ renderMore(); syncKeyUI(); }
   if(tab === 'list') renderList();
   window.scrollTo(0,0);
 }
@@ -679,7 +851,20 @@ document.querySelectorAll('nav button').forEach(b => b.onclick = () => go(b.data
 /* ========== 事件 ========== */
 $('#addbtn').onclick = () => { addWord($('#newword').value); $('#newword').value=''; };
 $('#newword').addEventListener('keydown', e => {
-  if(e.key === 'Enter'){ e.preventDefault(); $('#addbtn').click(); }
+  if(!$('#sugs').hidden && sugItems.length){
+    if(e.key === 'ArrowDown'){
+      e.preventDefault(); sugIdx = (sugIdx + 1) % sugItems.length; renderSugs(); return;
+    }
+    if(e.key === 'ArrowUp'){
+      e.preventDefault(); sugIdx = (sugIdx - 1 + sugItems.length) % sugItems.length; renderSugs(); return;
+    }
+    if(e.key === 'Escape'){ hideSugs(); return; }
+    if(e.key === 'Enter' && sugIdx >= 0){
+      e.preventDefault(); $('#newword').value = sugItems[sugIdx];
+      hideSugs(); $('#addbtn').click(); return;
+    }
+  }
+  if(e.key === 'Enter'){ e.preventDefault(); hideSugs(); $('#addbtn').click(); }
 });
 document.querySelectorAll('.filters button').forEach(b => b.onclick = () => {
   filter = b.dataset.f;
@@ -696,7 +881,7 @@ $('#listbody').addEventListener('click', e => {
     case 'edit': editId = (editId === id ? null : id); renderList(); break;
     case 'canceledit': editId = null; renderList(); break;
     case 'del':
-      if(confirm('把「' + w.term + '」從單字本刪掉？')){
+      if(confirm(`把「${w.term}」從單字本刪掉？`)){
         words = words.filter(x => x.id !== id); save(); renderList();
       }
       break;
@@ -716,7 +901,7 @@ $('#exportbtn').onclick = () => {
                         {type:'application/json'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = '單字本備份-' + new Date().toISOString().slice(0,10) + '.json';
+  a.download = `單字本備份-${new Date().toISOString().slice(0,10)}.json`;
   a.click(); setTimeout(()=>URL.revokeObjectURL(a.href), 1000);
 };
 $('#importbtn').onclick = () => $('#importfile').click();
@@ -737,14 +922,90 @@ $('#importfile').onchange = async e => {
       added++;
     }
     save(); renderList(); renderMore();
-    toast(added ? ('匯入 ' + added + ' 個新單字') : '沒有新的單字可以加');
+    toast(added ? `匯入 ${added} 個新單字` : '沒有新的單字可以加');
   }catch(err){ toast('這個檔案讀不出來'); }
   e.target.value = '';
 };
 $('#clearbtn').onclick = () => {
   if(!words.length) return toast('本來就是空的');
-  if(confirm('刪掉全部 ' + words.length + ' 個單字？這個動作救不回來。')){
+  if(confirm(`刪掉全部 ${words.length} 個單字？這個動作救不回來。`)){
     words = []; save(); renderList(); renderMore(); toast('清空了');
+  }
+};
+
+/* ========== 輸入建議 ========== */
+let sugTimer = null, sugItems = [], sugIdx = -1;
+function hideSugs(){ $('#sugs').hidden = true; sugItems = []; sugIdx = -1; }
+function renderSugs(){
+  const box = $('#sugs');
+  if(!sugItems.length){ hideSugs(); return; }
+  box.innerHTML = sugItems.map((w,i) =>
+    '<button type="button" data-i="' + i + '"' + (i === sugIdx ? ' class="sel"' : '') + '>' +
+    esc(w) + '</button>').join('');
+  box.hidden = false;
+}
+async function fetchSugs(prefix){
+  try{
+    const r = await withTimeout(
+      fetch('https://api.datamuse.com/sug?s=' + encodeURIComponent(prefix) + '&max=6'), 4000);
+    if(!r.ok) return;
+    const j = await r.json();
+    if($('#newword').value.trim().toLowerCase() !== prefix) return;
+    sugItems = j.map(x => x.word).filter(x => x.toLowerCase() !== prefix).slice(0,6);
+    sugIdx = -1; renderSugs();
+  }catch(e){}
+}
+$('#newword').addEventListener('input', () => {
+  const v = $('#newword').value.trim().toLowerCase();
+  clearTimeout(sugTimer);
+  if(v.length < 2){ hideSugs(); return; }
+  sugTimer = setTimeout(() => fetchSugs(v), 220);
+});
+$('#newword').addEventListener('blur', () => setTimeout(hideSugs, 200));
+$('#sugs').addEventListener('mousedown', e => {
+  const b = e.target.closest('button'); if(!b) return;
+  e.preventDefault();
+  $('#newword').value = sugItems[+b.dataset.i];
+  hideSugs(); $('#addbtn').click();
+});
+
+/* ========== Gemini 金鑰 ========== */
+function syncKeyUI(){
+  $('#gemkey').value = settings.key || '';
+  $('#gemmodel').value = settings.model || DEFAULT_MODEL;
+  renderKeyState();
+}
+function renderKeyState(msg, cls){
+  const el = $('#keystate');
+  el.className = 'keystate' + (cls ? ' ' + cls : '');
+  el.textContent = msg || (settings.key
+    ? '目前用 Gemini 查詢。'
+    : '還沒設金鑰，目前用免費字典查詢，會慢一些。');
+}
+$('#savekey').onclick = () => {
+  settings.key = $('#gemkey').value.trim();
+  settings.model = $('#gemmodel').value.trim() || DEFAULT_MODEL;
+  saveSettings();
+  renderKeyState(settings.key ? '金鑰已存在這台裝置上。' : '金鑰已清空。', settings.key ? 'ok' : '');
+};
+$('#clearkey').onclick = () => {
+  settings.key = ''; $('#gemkey').value = ''; saveSettings();
+  renderKeyState('金鑰已清除，改用免費字典。');
+};
+$('#testkey').onclick = async () => {
+  const k = $('#gemkey').value.trim() || settings.key;
+  if(!k){ renderKeyState('先貼上金鑰再測試。', 'bad'); return; }
+  const prevKey = settings.key, prevModel = settings.model;
+  settings.key = k;
+  settings.model = $('#gemmodel').value.trim() || DEFAULT_MODEL;
+  renderKeyState('測試中…');
+  try{
+    const d = await lookupGemini('resilient');
+    saveSettings();
+    renderKeyState('可以用。resilient 查回來是「' + (d.zh || '？') + '」。', 'ok');
+  }catch(e){
+    settings.key = prevKey; settings.model = prevModel;
+    renderKeyState('失敗：' + e.message, 'bad');
   }
 };
 
