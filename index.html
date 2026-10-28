@@ -77,7 +77,7 @@ main{padding-top:18px}
 .adding{font-size:13.5px;color:var(--graphite);margin:-6px 0 14px}
 
 /* 8 格 */
-.boxes{display:grid;grid-template-columns:repeat(9,1fr);gap:5px;margin-bottom:18px}
+.boxes{display:grid;grid-template-columns:repeat(8,1fr);gap:5px;margin-bottom:18px}
 .bx{background:var(--card);border:1px solid var(--rule);border-radius:10px;padding:8px 0 7px;text-align:center;position:relative;overflow:hidden}
 .bx b{display:block;font-family:var(--serif);font-size:19px;line-height:1.1;position:relative}
 .bx span{display:block;font-size:10.5px;color:var(--graphite);margin-top:2px;position:relative;white-space:nowrap}
@@ -182,6 +182,23 @@ nav .badge{position:absolute;top:6px;left:calc(50% + 6px);background:var(--coral
 .goalq textarea,.goaltext{width:100%;background:var(--paper);border:1px solid var(--rule);border-radius:10px;padding:9px 11px;resize:vertical;line-height:1.45}
 .goalq .acts{margin-top:10px}
 .sel{background:var(--paper);border:1px solid var(--rule);border-radius:10px;padding:9px 11px;font-size:15px;font-family:inherit}
+/* 精簡卡片 */
+.morebtn{display:block;margin-top:14px;background:none;border:0;padding:6px 0;font-size:14px;color:var(--graphite);text-decoration:underline;text-underline-offset:3px}
+#moreinfo .sense:first-child{border-top:1px dashed var(--rule)}
+.modebar{display:flex;gap:4px;background:var(--soft);border-radius:12px;padding:4px;margin-bottom:14px}
+.modebar button{flex:1;border:0;background:transparent;border-radius:9px;padding:8px 0;font-size:14px;color:var(--graphite)}
+.modebar button[aria-checked="true"]{background:var(--card);color:var(--ink);font-weight:600;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.zhq{font-size:30px;font-weight:600;line-height:1.35;padding:0 8px}
+.hint{font-size:13px;color:#A3A6AC;margin-top:10px}
+.back{display:flex;flex-direction:column;justify-content:center}
+.backtop{display:flex;align-items:center;gap:12px}
+.back .mainzh{font-size:22px}
+.flip.tall .flipin{min-height:480px}
+.flip.tall .back{justify-content:flex-start}
+.back .morebtn{margin-top:auto;padding-top:14px}
+.cardmore{margin-top:4px}
+.voicerow{display:flex;gap:8px}
+.voicerow .sel{flex:1;min-width:0}
 @media (prefers-reduced-motion:reduce){*{animation-duration:.01ms !important;transition-duration:.01ms !important}}
 @media (max-width:380px){.bx span{font-size:9.5px}.bx b{font-size:17px}}
 </style>
@@ -253,13 +270,18 @@ nav .badge{position:absolute;top:6px;left:calc(50% + 6px);background:var(--coral
       <div class="acts"><button class="btn primary" id="savesettings">儲存</button></div>
     </div>
     <div class="block">
+      <h2>發音聲音</h2>
+      <p>用這台裝置內建的美式英文聲音。聽起來怪怪的話，換一個試試；每台裝置可以各自選。</p>
+      <div class="voicerow"><select id="myvoice" class="sel"></select><button class="btn" id="voicetest">試聽</button></div>
+    </div>
+    <div class="block">
       <h2>各格單字數</h2>
       <table class="tbl" id="boxtable"></table>
     </div>
     <div class="block">
       <h2>複習怎麼運作</h2>
       <p>新加的字放在第 1 格。答對就往後移一格，間隔變長；答錯就往前退一格，間隔變短。</p>
-      <p>8 格的間隔：1 天、3 天、7 天、14 天、1 個月、3 個月、半年、1 年。第 8 格再答對就算畢業，不再出題。</p>
+      <p>8 格的間隔：1 天、3 天、7 天、14 天、1 個月、3 個月、半年、1 年。到了第 8 格就一直留著，每年複習一次，答錯才往前退。</p>
     </div>
     <div class="block">
       <h2>加到手機桌面</h2>
@@ -302,7 +324,7 @@ nav .badge{position:absolute;top:6px;left:calc(50% + 6px);background:var(--coral
 /* ================= 設定 ================= */
 const API = 'https://script.google.com/macros/s/AKfycbx9-RKsxftuuo1WTf6GkIdlOUpDBM0cG__wpavsfDTTPobQdMx8WwnbWk-sfWq9nqI-/exec';                       // Apps Script 網頁應用程式網址
 const BOXES = [1, 3, 7, 14, 30, 90, 180, 365];   // 要跟後台一致
-const MASTERED = BOXES.length + 1;
+const TOP = BOXES.length;   // 第 8 格是終點，不畢業
 const DAY = 86400000;
 const BOXLABEL = ['1天', '3天', '7天', '14天', '1個月', '3個月', '半年', '1年'];
 const SKEY = 'vocab2.session', CKEY = n => 'vocab2.cache.' + n, QKEY = n => 'vocab2.queue.' + n;
@@ -351,15 +373,15 @@ let boxFilter = 0;                      // 0 = 全部
 let tab = 'list';
 
 function saveCache(){ if(session) store.set(CKEY(session.name), words.filter(w => !w.pending)); }
-const isDue = w => !w.pending && w.box < MASTERED && w.due !== '' && Number(w.due) <= Date.now();
+const isDue = w => !w.pending && Number(w.due || 0) <= Date.now();
+const boxOf = w => Math.min(TOP, Number(w.box) || 1);
 const todayKey = () => new Date().toDateString();
 const reviewedToday = () => words.filter(w => w.lastReview && new Date(w.lastReview).toDateString() === todayKey()).length;
 const leftToday = () => settings.dailyGoal ? Math.max(0, settings.dailyGoal - reviewedToday()) : Infinity;
 const dueList = () => words.filter(isDue).sort((a, b) => a.box - b.box || a.due - b.due);
 
-function boxName(b){ return b >= MASTERED ? '已畢業' : '第 ' + b + ' 格'; }
+function boxName(b){ return '第 ' + Math.min(TOP, b) + ' 格'; }
 function dueText(w){
-  if(w.box >= MASTERED) return '已畢業';
   const d = Number(w.due) - Date.now();
   if(d <= 0) return '今天要複習';
   if(d < DAY) return Math.max(1, Math.round(d / 3600000)) + ' 小時後';
@@ -464,8 +486,8 @@ function renderBadge(){
 
 /* ================= 單字本 ================= */
 function boxCounts(){
-  const c = Array(MASTERED + 1).fill(0);
-  words.forEach(w => { if(!w.pending) c[Math.min(MASTERED, w.box || 1)]++; });
+  const c = Array(TOP + 1).fill(0);
+  words.forEach(w => { if(!w.pending) c[boxOf(w)]++; });
   return c;
 }
 function renderGoalCard(){
@@ -504,22 +526,21 @@ function renderList(){
   renderGoalCard();
   const c = boxCounts(), max = Math.max(1, ...c.slice(1));
   let h = '';
-  for(let b = 1; b <= MASTERED; b++){
-    const done = b === MASTERED;
-    h += `<button class="bx${done ? ' done' : ''}${c[b] ? '' : ' zero'}" data-b="${b}" aria-pressed="${boxFilter === b}"
+  for(let b = 1; b <= TOP; b++){
+    h += `<button class="bx${c[b] ? '' : ' zero'}" data-b="${b}" aria-pressed="${boxFilter === b}"
             aria-label="${boxName(b)}，${c[b]} 個字">
             <i style="height:${Math.round(c[b] / max * 100)}%"></i>
-            <b>${c[b]}</b><span>${done ? '畢業' : BOXLABEL[b - 1]}</span></button>`;
+            <b>${c[b]}</b><span>${BOXLABEL[b - 1]}</span></button>`;
   }
   $('#boxes').innerHTML = h;
   $('#boxes').querySelectorAll('.bx').forEach(el => el.onclick = () => {
     const b = +el.dataset.b; boxFilter = boxFilter === b ? 0 : b; renderList();
   });
 
-  const list = (boxFilter ? words.filter(w => Math.min(MASTERED, w.box) === boxFilter) : words.slice())
+  const list = (boxFilter ? words.filter(w => boxOf(w) === boxFilter) : words.slice())
     .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
   $('#listtitle').textContent = boxFilter
-    ? `${boxName(boxFilter)}${boxFilter < MASTERED ? '（每 ' + BOXLABEL[boxFilter - 1] + '）' : ''}・${list.length} 個字`
+    ? `${boxName(boxFilter)}（每 ${BOXLABEL[boxFilter - 1]}）・${list.length} 個字`
     : `全部 ${words.length} 個字`;
   $('#clearfilter').hidden = !boxFilter;
 
@@ -531,12 +552,12 @@ function renderList(){
   }
   if(!list.length){ body.innerHTML = `<div class="empty"><p>這一格目前是空的。</p></div>`; return; }
   body.innerHTML = list.map(w => {
-    const due = isDue(w), done = w.box >= MASTERED;
+    const due = isDue(w);
     if(w.pending) return `<div class="row pending"><span class="t"><span class="term">${esc(w.term)}</span>
       <span class="zh"><span class="spin"></span>查詢中…</span></span></div>`;
     return `<button class="row" data-id="${esc(w.id)}">
       <span class="t"><span class="term">${esc(w.term)}</span><span class="zh">${esc(w.zh)}</span></span>
-      <span class="chip${due ? ' due' : ''}${done ? ' done' : ''}">${due ? '待複習' : (done ? '畢業' : '第' + w.box + '格')}</span>
+      <span class="chip${due ? ' due' : ''}">${due ? '待複習' : '第' + boxOf(w) + '格'}</span>
     </button>`;
   }).join('');
 }
@@ -610,10 +631,14 @@ $('#sugs').addEventListener('mousedown', e => {
 });
 
 /* ================= 字卡內容 ================= */
-function detailHtml(w){
+function briefHtml(w){
   let h = '';
   if(w.phon) h += `<div class="phon">${esc(w.phon)}</div>`;
   if(w.zh) h += `<div class="mainzh">${esc(w.zh)}</div>`;
+  return h;
+}
+function moreHtml(w){
+  let h = '';
   (w.senses || []).forEach(s => {
     h += `<div class="sense">${s.pos ? `<span class="pos">${esc(s.pos)}</span>` : ''}${esc(s.zh)}
           ${s.def ? `<div class="def">${esc(s.def)}</div>` : ''}</div>`;
@@ -626,18 +651,36 @@ function detailHtml(w){
   return h;
 }
 
+/* ---------- 美式英文發音：主動挑 en-US 的好聲音 ---------- */
+const VKEY = 'vocab2.voice';
+const GOOD_VOICES = [/Samantha/i, /\bAva\b/i, /Allison/i, /Google US English/i, /Aria.*Natural/i,
+  /Jenny.*Natural/i, /Guy.*Natural/i, /\bAria\b/i, /\bJenny\b/i, /Susan/i, /\bAlex\b/i, /Zira/i];
+function usVoices(){
+  try{ return speechSynthesis.getVoices().filter(v => /^en[-_]US/i.test(v.lang)); }catch(e){ return []; }
+}
+function pickVoice(){
+  const list = usVoices(); if(!list.length) return null;
+  const saved = store.get(VKEY, '');
+  const s = saved && list.find(v => v.voiceURI === saved);
+  if(s) return s;
+  for(const re of GOOD_VOICES){ const v = list.find(v => re.test(v.name)); if(v) return v; }
+  return list.find(v => v.localService) || list[0];
+}
+try{ speechSynthesis.onvoiceschanged = () => { if(tab === 'me') renderVoices(); }; speechSynthesis.getVoices(); }catch(e){}
+
 function speak(term){
   try{
     const u = new SpeechSynthesisUtterance(term); u.lang = 'en-US'; u.rate = .9;
+    const v = pickVoice(); if(v) u.voice = v;
     speechSynthesis.cancel(); speechSynthesis.speak(u);
   }catch(e){ toast('這台裝置沒辦法發音'); }
 }
 
 /* ---------- 詳細頁 ---------- */
-let sheetWord = null, editing = false;
+let sheetWord = null, editing = false, sheetMore = false;
 function openWord(id){
   sheetWord = words.find(w => w.id === id); if(!sheetWord) return;
-  editing = false; renderSheet(); $('#sheet').hidden = false;
+  editing = false; sheetMore = false; renderSheet(); $('#sheet').hidden = false;
 }
 function closeSheet(){ $('#sheet').hidden = true; sheetWord = null; }
 $('#sheet').addEventListener('click', e => { if(e.target.id === 'sheet') closeSheet(); });
@@ -661,14 +704,19 @@ function renderSheet(){
         <button class="iconbtn" id="cl" aria-label="關閉">✕</button>
       </span>
     </div>
-    ${detailHtml(w)}
+    ${briefHtml(w)}
+    <button class="morebtn" id="morebtn" aria-expanded="${sheetMore || editing}">${sheetMore || editing ? '收起' : '更多：詞性、例句、編輯'}</button>
+    <div id="moreinfo" ${sheetMore || editing ? '' : 'hidden'}>
+    ${moreHtml(w)}
     <div class="meta">${boxName(w.box)}・${dueText(w)}・答對 ${w.right} 次、答錯 ${w.wrong} 次</div>
     ${ed}
     ${editing ? '' : `<div class="acts">
       <button class="btn" id="editbtn">編輯</button>
       <button class="btn" id="exbtn">換一句例句</button>
       <button class="btn" id="refetchbtn">重新查詢</button>
-      <button class="btn del" id="delbtn">刪除</button></div>`}`;
+      <button class="btn del" id="delbtn">刪除</button></div>`}
+    </div>`;
+  $('#morebtn').onclick = () => { sheetMore = !sheetMore; editing = false; renderSheet(); };
   $('#sp').onclick = () => speak(w.term);
   $('#cl').onclick = closeSheet;
   if(editing){
@@ -707,16 +755,32 @@ function replaceWord(nw){
 }
 
 /* ================= 複習：翻面字卡 ================= */
-let queue = [], qi = 0, flipped = false, sessionRight = 0, sessionWrong = 0, extraRound = false;
+const MKEY = 'vocab2.quizmode';
+let quizMode = store.get(MKEY, 'en');   // en：看英文猜中文；zh：看中文猜英文；mix：混合
+let queue = [], qi = 0, flipped = false, cardMore = false, sessionRight = 0, sessionWrong = 0;
+
+const dirFor = () => quizMode === 'mix' ? (Math.random() < .5 ? 'en' : 'zh') : quizMode;
+const toCards = list => list.map(w => ({ w, dir: dirFor() }));
 
 function startReview(){
-  queue = dueList().slice(0, leftToday()); qi = 0; flipped = false;
-  sessionRight = 0; sessionWrong = 0; extraRound = false;
+  queue = toCards(dueList().slice(0, leftToday())); qi = 0; flipped = false; cardMore = false;
+  sessionRight = 0; sessionWrong = 0;
   renderReview();
 }
 function moreReview(n){
-  queue = dueList().slice(0, n); qi = 0; flipped = false; extraRound = true;
+  queue = toCards(dueList().slice(0, n)); qi = 0; flipped = false; cardMore = false;
   renderReview();
+}
+function setMode(m){
+  quizMode = m; store.set(MKEY, m);
+  for(let i = qi; i < queue.length; i++) queue[i].dir = dirFor();   // 還沒考的卡片換方向
+  flipped = false; cardMore = false;
+  renderReview();
+}
+function modeBar(){
+  const opts = [['en', '英→中'], ['zh', '中→英'], ['mix', '混合']];
+  return `<div class="modebar" role="radiogroup" aria-label="考試方向">${opts.map(([k, t]) =>
+    `<button type="button" role="radio" aria-checked="${quizMode === k}" data-m="${k}">${t}</button>`).join('')}</div>`;
 }
 function renderReview(){
   const v = $('#v-review');
@@ -726,37 +790,40 @@ function renderReview(){
   if(qi >= queue.length){
     const waiting = dueList().length, goal = settings.dailyGoal;
     const did = reviewedToday();
-    const next = words.filter(w => w.box < MASTERED && !isDue(w) && !w.pending).sort((a, b) => a.due - b.due)[0];
+    const next = words.filter(w => !isDue(w) && !w.pending).sort((a, b) => a.due - b.due)[0];
     let title, body = '';
     if(!waiting){
       title = did ? '今天的字都複習完了' : '現在沒有要複習的字';
-      body = next ? '下一個要複習的是「' + esc(next.term) + '」，' + dueText(next) + '。' : (did ? '' : '所有字都畢業了。');
+      body = next ? '下一個要複習的是「' + esc(next.term) + '」，' + dueText(next) + '。' : '';
     }else{
       title = '今天的目標完成了';
       body = `今天已經複習 ${did} 個${goal ? '（目標 ' + goal + ' 個）' : ''}。<br>還有 ${waiting} 個字在排隊，沒做完沒關係，明天會接著出。`;
     }
     const score = (sessionRight + sessionWrong) ? `<p style="margin-bottom:10px">這一輪記得 ${sessionRight} 個、不記得 ${sessionWrong} 個。</p>` : '';
-    v.innerHTML = `<div class="empty"><div class="big">${title}</div>${score}<p>${body}</p>
+    v.innerHTML = modeBar() + `<div class="empty"><div class="big">${title}</div>${score}<p>${body}</p>
       ${waiting ? `<div class="acts" style="justify-content:center;margin-top:18px">
         <button class="btn primary" id="more10">再複習 ${Math.min(10, waiting)} 個</button></div>` : ''}</div>`;
+    bindModeBar();
     const m = $('#more10'); if(m) m.onclick = () => moreReview(10);
     return;
   }
-  const w = queue[qi];
+  const { w, dir } = queue[qi];
   const pct = Math.round(qi / queue.length * 100);
-  v.innerHTML = `
+  const enBig = `<span class="termwrap"><i class="marker"></i><span class="term">${esc(w.term)}</span></span>`;
+  const front = dir === 'en'
+    ? `${enBig}<div class="speakrow"><button class="iconbtn" id="rsp" aria-label="唸出來">♪</button></div>`
+    : `<div class="zhq">${esc(w.zh || '（沒有中文意思）')}</div><div class="hint">想想英文怎麼說</div>`;
+  const back = `
+    <div class="backtop">${enBig}<button class="iconbtn" id="bsp" aria-label="唸出來">♪</button></div>
+    ${briefHtml(w)}
+    ${cardMore ? `<div class="cardmore">${moreHtml(w)}</div>` : ''}
+    <button class="morebtn" id="cmore">${cardMore ? '收起' : '更多：詞性、例句'}</button>`;
+  v.innerHTML = modeBar() + `
     <div class="rev-top"><span>${qi + 1} / ${queue.length}</span><span class="rev-bar"><i style="width:${pct}%"></i></span></div>
-    <div class="flip${flipped ? ' on' : ''}" id="flip" role="button" tabindex="0" aria-label="${flipped ? '字卡背面' : '點一下翻面'}">
+    <div class="flip${flipped ? ' on' : ''}${cardMore ? ' tall' : ''}" id="flip" role="button" tabindex="0" aria-label="${flipped ? '字卡背面' : '點一下翻面'}">
       <div class="flipin">
-        <div class="face front">
-          <span class="termwrap"><i class="marker"></i><span class="term">${esc(w.term)}</span></span>
-          <div class="speakrow"><button class="iconbtn" id="rsp" aria-label="唸出來">♪</button></div>
-          <span class="tap">點一下翻面</span>
-        </div>
-        <div class="face back">
-          <span class="termwrap"><i class="marker"></i><span class="term">${esc(w.term)}</span></span>
-          ${detailHtml(w)}
-        </div>
+        <div class="face front">${front}<span class="tap">點一下翻面</span></div>
+        <div class="face back">${back}</div>
       </div>
     </div>
     ${flipped ? `<div class="grade">
@@ -764,30 +831,36 @@ function renderReview(){
       <button class="yes" id="gyes">記得</button>
     </div>` : `<div class="grade"><button style="grid-column:1/-1" id="doflip">翻面看答案</button></div>`}`;
 
-  const flip = () => { if(!flipped){ flipped = true; renderReview(); } };
-  $('#flip').onclick = e => { if(e.target.closest('#rsp')) return; flip(); };
+  bindModeBar();
+  const flip = () => { if(!flipped){ flipped = true; renderReview(); if(dir === 'zh') speak(w.term); } };
+  $('#flip').onclick = e => { if(e.target.closest('button')) return; flip(); };
   $('#flip').onkeydown = e => { if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); flip(); } };
-  $('#rsp').onclick = e => { e.stopPropagation(); speak(w.term); };
+  const rsp = $('#rsp'); if(rsp) rsp.onclick = e => { e.stopPropagation(); speak(w.term); };
+  $('#bsp').onclick = e => { e.stopPropagation(); speak(w.term); };
+  $('#cmore').onclick = e => { e.stopPropagation(); cardMore = !cardMore; renderReview(); };
   if(flipped){ $('#gno').onclick = () => grade(false); $('#gyes').onclick = () => grade(true); }
   else $('#doflip').onclick = flip;
+}
+function bindModeBar(){
+  document.querySelectorAll('.modebar button').forEach(b => b.onclick = () => setMode(b.dataset.m));
 }
 
 function applyGrade(w, correct){
   const from = w.box;
-  if(correct){ w.box = Math.min(MASTERED, from + 1); w.right++; }
-  else { w.box = Math.max(1, Math.min(from, BOXES.length) - 1); w.wrong++; }
-  w.due = w.box >= MASTERED ? '' : Date.now() + BOXES[w.box - 1] * DAY;
+  if(correct){ w.box = Math.min(TOP, from + 1); w.right++; }
+  else { w.box = Math.max(1, Math.min(TOP, from) - 1); w.wrong++; }
+  w.due = Date.now() + BOXES[w.box - 1] * DAY;
   w.lastReview = new Date().toISOString();
   return w;
 }
 
 function grade(correct){
-  const w = queue[qi];
+  const { w } = queue[qi];
   applyGrade(w, correct);
   correct ? sessionRight++ : sessionWrong++;
   saveCache(); renderBadge();
   sendReview(w.id, correct);
-  qi++; flipped = false; renderReview();
+  qi++; flipped = false; cardMore = false; renderReview();
 }
 
 /* 複習結果先記在本機佇列，網路斷了也不會掉 */
@@ -825,10 +898,10 @@ function renderMe(){
   $('#stats').innerHTML =
     `<div class="stat"><b>${words.length}</b><span>收錄單字</span></div>` +
     `<div class="stat"><b>${reviewedToday()}</b><span>今天已複習${settings.dailyGoal ? '／' + settings.dailyGoal : ''}</span></div>` +
-    `<div class="stat"><b>${c[MASTERED]}</b><span>已畢業</span></div>`;
+    `<div class="stat"><b>${c[TOP]}</b><span>在第 8 格（每年）</span></div>`;
   let t = '';
-  for(let b = 1; b <= MASTERED; b++){
-    t += `<tr><td>${boxName(b)}${b < MASTERED ? '（每 ' + BOXLABEL[b - 1] + '）' : ''}</td><td>${c[b]}</td></tr>`;
+  for(let b = 1; b <= TOP; b++){
+    t += `<tr><td>${boxName(b)}（每 ${BOXLABEL[b - 1]}）</td><td>${c[b]}</td></tr>`;
   }
   $('#boxtable').innerHTML = t;
   $('#meline').textContent = '目前登入：' + session.name;
@@ -836,7 +909,17 @@ function renderMe(){
   const sel = $('#mydaily'), v = String(settings.dailyGoal);
   if(![...sel.options].some(o => o.value === v)) sel.insertAdjacentHTML('beforeend', `<option value="${v}">${v} 個</option>`);
   sel.value = v;
+  renderVoices();
 }
+function renderVoices(){
+  const sel = $('#myvoice'), list = usVoices(), cur = pickVoice();
+  if(!list.length){ sel.innerHTML = '<option>這台裝置沒有美式英文聲音</option>'; sel.disabled = true; return; }
+  sel.disabled = false;
+  sel.innerHTML = list.map(v => `<option value="${esc(v.voiceURI)}">${esc(v.name)}${v.localService ? '' : '（線上）'}</option>`).join('');
+  if(cur) sel.value = cur.voiceURI;
+}
+$('#myvoice').onchange = () => { store.set(VKEY, $('#myvoice').value); speak('Nice to meet you.'); };
+$('#voicetest').onclick = () => speak('Nice to meet you. This is how I sound.');
 $('#savesettings').onclick = () => saveSettings({ goal: $('#mygoal').value.trim(), dailyGoal: +$('#mydaily').value });
 $('#logoutbtn').onclick = () => { if(confirm('確定要登出？')) logout(); };
 $('#pwbtn').onclick = () => { $('#pwform').hidden = !$('#pwform').hidden; };
