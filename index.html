@@ -199,6 +199,12 @@ nav .badge{position:absolute;top:6px;left:calc(50% + 6px);background:var(--coral
 .cardmore{margin-top:4px}
 .voicerow{display:flex;gap:8px}
 .voicerow .sel{flex:1;min-width:0}
+.practice{margin-top:26px;padding-top:18px;border-top:1px dashed var(--rule)}
+.practice .ptitle{font-size:14px;color:var(--ink);margin:0 0 10px}
+.practice .pnote{font-size:12.5px;margin-top:10px}
+.ptag{display:inline-block;background:#E8F0FF;color:#3557A8;border-radius:5px;padding:0 7px;font-size:12px;font-weight:600;margin-right:8px}
+.lhbtns{display:flex;gap:12px}
+.listhead #practicebox{color:var(--ink);font-weight:600}
 @media (prefers-reduced-motion:reduce){*{animation-duration:.01ms !important;transition-duration:.01ms !important}}
 @media (max-width:380px){.bx span{font-size:9.5px}.bx b{font-size:17px}}
 </style>
@@ -249,7 +255,7 @@ nav .badge{position:absolute;top:6px;left:calc(50% + 6px);background:var(--coral
     <div class="boxes" id="boxes"></div>
     <div class="boxhint"><span>← 剛加入、常複習</span><span>記牢了 →</span></div>
 
-    <div class="listhead"><h3 id="listtitle"></h3><button id="clearfilter" hidden>看全部</button></div>
+    <div class="listhead"><h3 id="listtitle"></h3><span class="lhbtns"><button id="practicebox" hidden>練習這一格</button><button id="clearfilter" hidden>看全部</button></span></div>
     <div id="listbody"></div>
   </section>
 
@@ -543,6 +549,7 @@ function renderList(){
     ? `${boxName(boxFilter)}（每 ${BOXLABEL[boxFilter - 1]}）・${list.length} 個字`
     : `全部 ${words.length} 個字`;
   $('#clearfilter').hidden = !boxFilter;
+  $('#practicebox').hidden = !boxFilter || !list.length;
 
   const body = $('#listbody');
   if(!words.length){
@@ -562,6 +569,7 @@ function renderList(){
   }).join('');
 }
 $('#clearfilter').onclick = () => { boxFilter = 0; renderList(); };
+$('#practicebox').onclick = () => startPractice(shuffle(ready().filter(w => boxOf(w) === boxFilter)));
 $('#listbody').addEventListener('click', e => {
   const r = e.target.closest('.row'); if(r) openWord(r.dataset.id);
 });
@@ -760,18 +768,55 @@ function replaceWord(nw){
 const MKEY = 'vocab2.quizmode';
 let quizMode = store.get(MKEY, 'en');   // en：看英文猜中文；zh：看中文猜英文；mix：混合
 let queue = [], qi = 0, flipped = false, cardMore = false, sessionRight = 0, sessionWrong = 0;
+let practice = false;   // 自由練習：不改格子、不改下次複習時間
 
 const dirFor = () => quizMode === 'mix' ? (Math.random() < .5 ? 'en' : 'zh') : quizMode;
 const toCards = list => list.map(w => ({ w, dir: dirFor() }));
 
 function startReview(){
+  practice = false;
   queue = toCards(dueList().slice(0, leftToday())); qi = 0; flipped = false; cardMore = false;
   sessionRight = 0; sessionWrong = 0;
   renderReview();
 }
 function moreReview(n){
+  practice = false;
   queue = toCards(dueList().slice(0, n)); qi = 0; flipped = false; cardMore = false;
   renderReview();
+}
+const shuffle = a => { a = a.slice(); for(let i = a.length - 1; i > 0; i--){ const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const ready = () => words.filter(w => !w.pending);
+// 最不熟：格子越前面越不熟，同格子裡答錯比例高的先
+const weakest = n => ready().sort((a, b) => boxOf(a) - boxOf(b) ||
+  (b.wrong / (b.right + b.wrong || 1)) - (a.wrong / (a.right + a.wrong || 1))).slice(0, n);
+function startPractice(list){
+  if(!list.length){ toast('沒有可以練習的字'); return; }
+  if(tab !== 'review'){
+    tab = 'review';
+    ['list', 'review', 'me'].forEach(x => $('#v-' + x).hidden = x !== 'review');
+    document.querySelectorAll('nav button').forEach(b =>
+      b.dataset.tab === 'review' ? b.setAttribute('aria-current', 'page') : b.removeAttribute('aria-current'));
+    window.scrollTo(0, 0);
+  }
+  practice = true;
+  queue = toCards(list); qi = 0; flipped = false; cardMore = false; sessionRight = 0; sessionWrong = 0;
+  renderReview();
+}
+function practiceButtons(primary){
+  const n = Math.min(10, ready().length);
+  return `<div class="practice">
+    <p class="ptitle">${primary ? '想多練幾個？' : '或是自由練習'}</p>
+    <div class="acts" style="justify-content:center">
+      <button class="btn${primary ? ' primary' : ''}" id="pweak">練習最不熟的 ${n} 個</button>
+      <button class="btn" id="prand">隨機練習 ${n} 個</button>
+    </div>
+    <p class="pnote">練習不會影響複習排程。</p>
+  </div>`;
+}
+function bindPractice(){
+  const a = $('#pweak'), b = $('#prand');
+  if(a) a.onclick = () => startPractice(weakest(10));
+  if(b) b.onclick = () => startPractice(shuffle(ready()).slice(0, 10));
 }
 function setMode(m){
   quizMode = m; store.set(MKEY, m);
@@ -794,7 +839,10 @@ function renderReview(){
     const did = reviewedToday();
     const next = words.filter(w => !isDue(w) && !w.pending).sort((a, b) => a.due - b.due)[0];
     let title, body = '';
-    if(!waiting){
+    if(practice){
+      title = '練習完了';
+      body = '這次練習沒有改變複習排程。';
+    }else if(!waiting){
       title = did ? '今天的字都複習完了' : '現在沒有要複習的字';
       body = next ? '下一個要複習的是「' + esc(next.term) + '」，' + dueText(next) + '。' : '';
     }else{
@@ -803,9 +851,10 @@ function renderReview(){
     }
     const score = (sessionRight + sessionWrong) ? `<p style="margin-bottom:10px">這一輪記得 ${sessionRight} 個、不記得 ${sessionWrong} 個。</p>` : '';
     v.innerHTML = modeBar() + `<div class="empty"><div class="big">${title}</div>${score}<p>${body}</p>
-      ${waiting ? `<div class="acts" style="justify-content:center;margin-top:18px">
-        <button class="btn primary" id="more10">再複習 ${Math.min(10, waiting)} 個</button></div>` : ''}</div>`;
-    bindModeBar();
+      ${waiting && !practice ? `<div class="acts" style="justify-content:center;margin-top:18px">
+        <button class="btn primary" id="more10">再複習 ${Math.min(10, waiting)} 個</button></div>` : ''}
+      ${practiceButtons(!waiting || practice)}</div>`;
+    bindModeBar(); bindPractice();
     const m = $('#more10'); if(m) m.onclick = () => moreReview(10);
     return;
   }
@@ -821,7 +870,7 @@ function renderReview(){
     ${cardMore ? `<div class="cardmore">${moreHtml(w)}</div>` : ''}
     <button class="morebtn" id="cmore">${cardMore ? '收起' : '更多：詞性、例句'}</button>`;
   v.innerHTML = modeBar() + `
-    <div class="rev-top"><span>${qi + 1} / ${queue.length}</span><span class="rev-bar"><i style="width:${pct}%"></i></span></div>
+    <div class="rev-top"><span>${practice ? '<b class="ptag">練習</b>' : ''}${qi + 1} / ${queue.length}</span><span class="rev-bar"><i style="width:${pct}%"></i></span></div>
     <div class="flip${flipped ? ' on' : ''}${cardMore ? ' tall' : ''}" id="flip" role="button" tabindex="0" aria-label="${flipped ? '字卡背面' : '點一下翻面'}">
       <div class="flipin">
         <div class="face front">${front}<span class="tap">點一下翻面</span></div>
@@ -858,6 +907,11 @@ function applyGrade(w, correct){
 
 function grade(correct){
   const { w } = queue[qi];
+  if(practice){
+    correct ? sessionRight++ : sessionWrong++;
+    qi++; flipped = false; cardMore = false; renderReview();
+    return;
+  }
   applyGrade(w, correct);
   correct ? sessionRight++ : sessionWrong++;
   saveCache(); renderBadge();
