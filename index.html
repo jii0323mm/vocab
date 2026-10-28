@@ -176,6 +176,12 @@ nav .badge{position:absolute;top:6px;left:calc(50% + 6px);background:var(--coral
 #toast.show{opacity:1;transform:translate(-50%,0)}
 .spin{display:inline-block;width:14px;height:14px;border:2px solid var(--rule);border-top-color:var(--ink);border-radius:50%;animation:sp .8s linear infinite;vertical-align:-2px;margin-right:6px}
 @keyframes sp{to{transform:rotate(360deg)}}
+.row.pending{opacity:.65}
+.goalq .chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.chipbtn{border:1px solid var(--rule);background:var(--paper);border-radius:999px;padding:5px 12px;font-size:13.5px}
+.goalq textarea,.goaltext{width:100%;background:var(--paper);border:1px solid var(--rule);border-radius:10px;padding:9px 11px;resize:vertical;line-height:1.45}
+.goalq .acts{margin-top:10px}
+.sel{background:var(--paper);border:1px solid var(--rule);border-radius:10px;padding:9px 11px;font-size:15px;font-family:inherit}
 @media (prefers-reduced-motion:reduce){*{animation-duration:.01ms !important;transition-duration:.01ms !important}}
 @media (max-width:380px){.bx span{font-size:9.5px}.bx b{font-size:17px}}
 </style>
@@ -221,7 +227,7 @@ nav .badge{position:absolute;top:6px;left:calc(50% + 6px);background:var(--coral
       </div>
       <div class="sugs" id="sugs" hidden></div>
     </div>
-    <div class="adding" id="adding" hidden></div>
+    <div id="goalcard"></div>
 
     <div class="boxes" id="boxes"></div>
     <div class="boxhint"><span>← 剛加入、常複習</span><span>記牢了 →</span></div>
@@ -234,6 +240,18 @@ nav .badge{position:absolute;top:6px;left:calc(50% + 6px);background:var(--coral
 
   <section id="v-me" hidden>
     <div class="stats" id="stats"></div>
+    <div class="block">
+      <h2>學英文的目的</h2>
+      <p>新加的字，例句會依照這個目的來寫。改了之後，舊的字可以在詳細頁按「換一句例句」。</p>
+      <textarea class="goaltext" id="mygoal" rows="2" placeholder="例如：跟國外客戶談訂單、寫英文 email"></textarea>
+      <h2 style="margin-top:14px">每天複習目標</h2>
+      <p>一天做到這個數量就算完成；沒複習到的字明天接著排，不會被扣分。</p>
+      <select id="mydaily" class="sel">
+        <option value="10">10 個</option><option value="20">20 個</option><option value="30">30 個</option>
+        <option value="50">50 個</option><option value="100">100 個</option><option value="0">不限，全部複習</option>
+      </select>
+      <div class="acts"><button class="btn primary" id="savesettings">儲存</button></div>
+    </div>
     <div class="block">
       <h2>各格單字數</h2>
       <table class="tbl" id="boxtable"></table>
@@ -327,11 +345,16 @@ async function api(action, data){
 /* ================= 狀態 ================= */
 let session = store.get(SKEY, null);   // {name, token}
 let words = [];
+let settings = { goal: '', dailyGoal: 20 };
+let settingsVer = 0;   // 本機改過設定後，比它早發出的同步結果不能蓋掉
 let boxFilter = 0;                      // 0 = 全部
 let tab = 'list';
 
-function saveCache(){ if(session) store.set(CKEY(session.name), words); }
-const isDue = w => w.box < MASTERED && w.due !== '' && Number(w.due) <= Date.now();
+function saveCache(){ if(session) store.set(CKEY(session.name), words.filter(w => !w.pending)); }
+const isDue = w => !w.pending && w.box < MASTERED && w.due !== '' && Number(w.due) <= Date.now();
+const todayKey = () => new Date().toDateString();
+const reviewedToday = () => words.filter(w => w.lastReview && new Date(w.lastReview).toDateString() === todayKey()).length;
+const leftToday = () => settings.dailyGoal ? Math.max(0, settings.dailyGoal - reviewedToday()) : Infinity;
 const dueList = () => words.filter(isDue).sort((a, b) => a.box - b.box || a.due - b.due);
 
 function boxName(b){ return b >= MASTERED ? '已畢業' : '第 ' + b + ' 格'; }
@@ -383,7 +406,7 @@ $('#authform').addEventListener('submit', async e => {
 });
 
 function logout(expired){
-  if(session){ store.del(CKEY(session.name)); store.del(QKEY(session.name)); }
+  if(session){ store.del(CKEY(session.name)); store.del(CKEY(session.name) + '.settings'); store.del(QKEY(session.name)); }
   session = null; words = []; store.del(SKEY);
   document.body.classList.remove('authed');
   $('#appview').hidden = true; $('#authview').hidden = false;
@@ -397,16 +420,19 @@ async function enterApp(){
   $('#authview').hidden = true; $('#appview').hidden = false;
   document.body.classList.add('authed');
   $('#who').textContent = session.name;
-  words = store.get(CKEY(session.name), []);
+  words = store.get(CKEY(session.name), []).filter(w => !w.pending);
+  settings = store.get(CKEY(session.name) + '.settings', settings);
   go('list');
   await flushQueue();
   await refresh();
 }
 
 async function refresh(){
+  const ver = settingsVer;
   try{
     const r = await api('list');
-    words = r.words || [];
+    words = (r.words || []).concat(words.filter(w => w.pending));
+    if(r.settings && ver === settingsVer){ settings = r.settings; store.set(CKEY(session.name) + '.settings', settings); }
     saveCache();
     renderAll();
   }catch(e){
@@ -432,17 +458,50 @@ function renderAll(){
   if(tab === 'me') renderMe();
 }
 function renderBadge(){
-  const n = dueList().length, b = $('#navbadge');
+  const n = Math.min(dueList().length, leftToday()), b = $('#navbadge');
   b.hidden = !n; b.textContent = n > 99 ? '99+' : n;
 }
 
 /* ================= 單字本 ================= */
 function boxCounts(){
   const c = Array(MASTERED + 1).fill(0);
-  words.forEach(w => c[Math.min(MASTERED, w.box || 1)]++);
+  words.forEach(w => { if(!w.pending) c[Math.min(MASTERED, w.box || 1)]++; });
   return c;
 }
+function renderGoalCard(){
+  const el = $('#goalcard');
+  if(settings.goal || store.get('vocab2.goalskip.' + session.name, false)){ el.innerHTML = ''; return; }
+  if(el.querySelector('.goalq')) return;   // 已經顯示中，別把正在打的字洗掉
+  const picks = ['工作上寫英文 email、開會', '出國旅遊', '準備考試（多益、雅思）', '看影集、新聞', '日常閱讀'];
+  el.innerHTML = `<div class="block goalq">
+    <h2>你學單字是為了什麼？</h2>
+    <p>例句會依照你的目的來寫，學了馬上用得到。之後可以在「我的」隨時修改。</p>
+    <div class="chips">${picks.map(x => `<button type="button" class="chipbtn">${esc(x)}</button>`).join('')}</div>
+    <textarea id="goalinput" rows="2" placeholder="也可以自己寫，例如：跟國外客戶談魔術道具訂單"></textarea>
+    <div class="acts"><button class="btn primary" id="goalsave">好了</button><button class="btn ghost" id="goalskip">先略過</button></div>
+  </div>`;
+  el.querySelectorAll('.chipbtn').forEach(b => b.onclick = () => {
+    const t = $('#goalinput'); t.value = t.value ? t.value + '、' + b.textContent : b.textContent;
+  });
+  $('#goalsave').onclick = () => {
+    const g = $('#goalinput').value.trim();
+    if(!g){ toast('寫一下目的，或按「先略過」'); return; }
+    saveSettings({ goal: g });
+  };
+  $('#goalskip').onclick = () => { store.set('vocab2.goalskip.' + session.name, true); renderGoalCard(); };
+}
+
+async function saveSettings(patch){
+  try{
+    const r = await api('settings', patch);
+    settingsVer++;
+    settings = r.settings; store.set(CKEY(session.name) + '.settings', settings);
+    toast('存好了'); renderAll();
+  }catch(e){ toast(e.message); }
+}
+
 function renderList(){
+  renderGoalCard();
   const c = boxCounts(), max = Math.max(1, ...c.slice(1));
   let h = '';
   for(let b = 1; b <= MASTERED; b++){
@@ -473,6 +532,8 @@ function renderList(){
   if(!list.length){ body.innerHTML = `<div class="empty"><p>這一格目前是空的。</p></div>`; return; }
   body.innerHTML = list.map(w => {
     const due = isDue(w), done = w.box >= MASTERED;
+    if(w.pending) return `<div class="row pending"><span class="t"><span class="term">${esc(w.term)}</span>
+      <span class="zh"><span class="spin"></span>查詢中…</span></span></div>`;
     return `<button class="row" data-id="${esc(w.id)}">
       <span class="t"><span class="term">${esc(w.term)}</span><span class="zh">${esc(w.zh)}</span></span>
       <span class="chip${due ? ' due' : ''}${done ? ' done' : ''}">${due ? '待複習' : (done ? '畢業' : '第' + w.box + '格')}</span>
@@ -484,34 +545,29 @@ $('#listbody').addEventListener('click', e => {
   const r = e.target.closest('.row'); if(r) openWord(r.dataset.id);
 });
 
-/* ---------- 加字 ---------- */
-let adding = 0;
-async function addWord(raw){
+/* ---------- 加字（先放進清單，背景查詢） ---------- */
+function addWord(raw){
   const term = raw.trim().replace(/\s+/g, ' ');
   if(!term) return;
   const dup = words.find(w => w.term.toLowerCase() === term.toLowerCase());
-  if(dup){ toast('這個字已經在單字本裡了'); openWord(dup.id); return; }
+  if(dup){ toast(dup.pending ? '「' + term + '」還在查詢中' : '這個字已經在單字本裡了'); if(!dup.pending) openWord(dup.id); return; }
 
-  adding++; showAdding(term);
-  try{
-    const r = await api('add', { term });
+  const tmp = { id: 'tmp' + Date.now() + Math.random().toString(36).slice(2, 5), term, zh: '查詢中…',
+    pending: true, box: 1, due: '', senses: [], forms: [], right: 0, wrong: 0, createdAt: new Date().toISOString() };
+  words.unshift(tmp);
+  renderAll();
+  api('add', { term, goal: settings.goal }).then(r => {
+    words = words.filter(w => w.id !== tmp.id);
     if(!words.some(w => w.id === r.word.id)) words.unshift(r.word);
     saveCache(); renderAll();
-    if(r.duplicate) toast('這個字已經在單字本裡了');
-    else toast('加入「' + r.word.term + '」：' + (r.word.zh || ''));
-  }catch(e){
-    toast(e.code === 'notfound' ? e.message : '沒加成功：' + e.message, 3600);
-    if(e.code !== 'notfound') $('#newword').value = term;
-  }finally{
-    adding--; showAdding();
-  }
+    if(sheetWord && sheetWord.id === tmp.id) openWord(r.word.id);
+  }).catch(e => {
+    words = words.filter(w => w.id !== tmp.id);
+    renderAll();
+    toast(e.code === 'notfound' ? e.message : '「' + term + '」沒加成功：' + e.message, 3600);
+  });
 }
-function showAdding(term){
-  const el = $('#adding');
-  if(adding && term){ el.hidden = false; el.innerHTML = `<span class="spin"></span>正在查「${esc(term)}」…`; }
-  else if(!adding){ el.hidden = true; }
-}
-$('#addbtn').onclick = () => { const v = $('#newword').value; $('#newword').value = ''; hideSugs(); addWord(v); };
+$('#addbtn').onclick = () => { const v = $('#newword').value; $('#newword').value = ''; hideSugs(); addWord(v); $('#newword').focus(); };
 
 /* ---------- 輸入建議 ---------- */
 let sugTimer = null, sugItems = [], sugIdx = -1;
@@ -610,6 +666,7 @@ function renderSheet(){
     ${ed}
     ${editing ? '' : `<div class="acts">
       <button class="btn" id="editbtn">編輯</button>
+      <button class="btn" id="exbtn">換一句例句</button>
       <button class="btn" id="refetchbtn">重新查詢</button>
       <button class="btn del" id="delbtn">刪除</button></div>`}`;
   $('#sp').onclick = () => speak(w.term);
@@ -625,9 +682,14 @@ function renderSheet(){
     };
   }else{
     $('#editbtn').onclick = () => { editing = true; renderSheet(); };
+    $('#exbtn').onclick = async () => {
+      const b = $('#exbtn'); b.disabled = true; b.innerHTML = '<span class="spin"></span>產生中';
+      try{ const r = await api('example', { id: w.id, goal: settings.goal }); replaceWord(r.word); renderSheet(); toast('換好了'); }
+      catch(err){ toast(err.message); b.disabled = false; b.textContent = '換一句例句'; }
+    };
     $('#refetchbtn').onclick = async () => {
       const b = $('#refetchbtn'); b.disabled = true; b.innerHTML = '<span class="spin"></span>查詢中';
-      try{ const r = await api('refetch', { id: w.id }); replaceWord(r.word); renderSheet(); toast('更新了'); }
+      try{ const r = await api('refetch', { id: w.id, goal: settings.goal }); replaceWord(r.word); renderSheet(); toast('更新了'); }
       catch(err){ toast(err.message); b.disabled = false; b.textContent = '重新查詢'; }
     };
     $('#delbtn').onclick = async () => {
@@ -645,9 +707,15 @@ function replaceWord(nw){
 }
 
 /* ================= 複習：翻面字卡 ================= */
-let queue = [], qi = 0, flipped = false, sessionRight = 0, sessionWrong = 0;
+let queue = [], qi = 0, flipped = false, sessionRight = 0, sessionWrong = 0, extraRound = false;
+
 function startReview(){
-  queue = dueList(); qi = 0; flipped = false; sessionRight = 0; sessionWrong = 0;
+  queue = dueList().slice(0, leftToday()); qi = 0; flipped = false;
+  sessionRight = 0; sessionWrong = 0; extraRound = false;
+  renderReview();
+}
+function moreReview(n){
+  queue = dueList().slice(0, n); qi = 0; flipped = false; extraRound = true;
   renderReview();
 }
 function renderReview(){
@@ -656,23 +724,31 @@ function renderReview(){
     v.innerHTML = `<div class="empty"><div class="big">還沒有單字</div><p>先到單字本加幾個字。</p></div>`; return;
   }
   if(qi >= queue.length){
-    const next = words.filter(w => w.box < MASTERED && !isDue(w)).sort((a, b) => a.due - b.due)[0];
-    v.innerHTML = `<div class="empty">
-      <div class="big">${queue.length ? '今天複習完了' : '現在沒有要複習的字'}</div>
-      <p>${queue.length ? `答對 ${sessionRight} 個、答錯 ${sessionWrong} 個。<br>` : ''}
-      ${next ? '下一個要複習的是「' + esc(next.term) + '」，' + dueText(next) + '。' : '所有字都畢業了。'}</p></div>`;
+    const waiting = dueList().length, goal = settings.dailyGoal;
+    const did = reviewedToday();
+    const next = words.filter(w => w.box < MASTERED && !isDue(w) && !w.pending).sort((a, b) => a.due - b.due)[0];
+    let title, body = '';
+    if(!waiting){
+      title = did ? '今天的字都複習完了' : '現在沒有要複習的字';
+      body = next ? '下一個要複習的是「' + esc(next.term) + '」，' + dueText(next) + '。' : (did ? '' : '所有字都畢業了。');
+    }else{
+      title = '今天的目標完成了';
+      body = `今天已經複習 ${did} 個${goal ? '（目標 ' + goal + ' 個）' : ''}。<br>還有 ${waiting} 個字在排隊，沒做完沒關係，明天會接著出。`;
+    }
+    const score = (sessionRight + sessionWrong) ? `<p style="margin-bottom:10px">這一輪記得 ${sessionRight} 個、不記得 ${sessionWrong} 個。</p>` : '';
+    v.innerHTML = `<div class="empty"><div class="big">${title}</div>${score}<p>${body}</p>
+      ${waiting ? `<div class="acts" style="justify-content:center;margin-top:18px">
+        <button class="btn primary" id="more10">再複習 ${Math.min(10, waiting)} 個</button></div>` : ''}</div>`;
+    const m = $('#more10'); if(m) m.onclick = () => moreReview(10);
     return;
   }
   const w = queue[qi];
   const pct = Math.round(qi / queue.length * 100);
-  const upGap = w.box >= BOXES.length ? '畢業' : BOXLABEL[w.box] + '後';
-  const downBox = Math.max(1, Math.min(w.box, BOXES.length) - 1);
   v.innerHTML = `
     <div class="rev-top"><span>${qi + 1} / ${queue.length}</span><span class="rev-bar"><i style="width:${pct}%"></i></span></div>
     <div class="flip${flipped ? ' on' : ''}" id="flip" role="button" tabindex="0" aria-label="${flipped ? '字卡背面' : '點一下翻面'}">
       <div class="flipin">
         <div class="face front">
-          <span class="boxtag">${boxName(w.box)}</span>
           <span class="termwrap"><i class="marker"></i><span class="term">${esc(w.term)}</span></span>
           <div class="speakrow"><button class="iconbtn" id="rsp" aria-label="唸出來">♪</button></div>
           <span class="tap">點一下翻面</span>
@@ -684,8 +760,8 @@ function renderReview(){
       </div>
     </div>
     ${flipped ? `<div class="grade">
-      <button class="no" id="gno">答錯<small>回到第 ${downBox} 格・${BOXLABEL[downBox - 1]}後</small></button>
-      <button class="yes" id="gyes">答對<small>${w.box >= BOXES.length ? '直接畢業' : '升到第 ' + (w.box + 1) + ' 格・' + upGap}</small></button>
+      <button class="no" id="gno">不記得</button>
+      <button class="yes" id="gyes">記得</button>
     </div>` : `<div class="grade"><button style="grid-column:1/-1" id="doflip">翻面看答案</button></div>`}`;
 
   const flip = () => { if(!flipped){ flipped = true; renderReview(); } };
@@ -701,6 +777,7 @@ function applyGrade(w, correct){
   if(correct){ w.box = Math.min(MASTERED, from + 1); w.right++; }
   else { w.box = Math.max(1, Math.min(from, BOXES.length) - 1); w.wrong++; }
   w.due = w.box >= MASTERED ? '' : Date.now() + BOXES[w.box - 1] * DAY;
+  w.lastReview = new Date().toISOString();
   return w;
 }
 
@@ -710,8 +787,6 @@ function grade(correct){
   correct ? sessionRight++ : sessionWrong++;
   saveCache(); renderBadge();
   sendReview(w.id, correct);
-  toast(correct ? (w.box >= MASTERED ? '畢業了！' : '→ ' + boxName(w.box) + '，' + BOXLABEL[w.box - 1] + '後再見')
-                : '→ ' + boxName(w.box) + '，' + BOXLABEL[w.box - 1] + '後再問', 1600);
   qi++; flipped = false; renderReview();
 }
 
@@ -746,10 +821,10 @@ window.addEventListener('online', flushQueue);
 
 /* ================= 我的 ================= */
 function renderMe(){
-  const c = boxCounts(), due = dueList().length;
+  const c = boxCounts();
   $('#stats').innerHTML =
     `<div class="stat"><b>${words.length}</b><span>收錄單字</span></div>` +
-    `<div class="stat"><b>${due}</b><span>今天待複習</span></div>` +
+    `<div class="stat"><b>${reviewedToday()}</b><span>今天已複習${settings.dailyGoal ? '／' + settings.dailyGoal : ''}</span></div>` +
     `<div class="stat"><b>${c[MASTERED]}</b><span>已畢業</span></div>`;
   let t = '';
   for(let b = 1; b <= MASTERED; b++){
@@ -757,7 +832,12 @@ function renderMe(){
   }
   $('#boxtable').innerHTML = t;
   $('#meline').textContent = '目前登入：' + session.name;
+  if(document.activeElement !== $('#mygoal')) $('#mygoal').value = settings.goal || '';
+  const sel = $('#mydaily'), v = String(settings.dailyGoal);
+  if(![...sel.options].some(o => o.value === v)) sel.insertAdjacentHTML('beforeend', `<option value="${v}">${v} 個</option>`);
+  sel.value = v;
 }
+$('#savesettings').onclick = () => saveSettings({ goal: $('#mygoal').value.trim(), dailyGoal: +$('#mydaily').value });
 $('#logoutbtn').onclick = () => { if(confirm('確定要登出？')) logout(); };
 $('#pwbtn').onclick = () => { $('#pwform').hidden = !$('#pwform').hidden; };
 $('#pwform').onsubmit = async e => {
