@@ -1,5 +1,5 @@
-/* 單字本 service worker：App 本身離線可開；後台、查字、輸入建議一律走網路 */
-const VERSION = 'vocab-v5';
+/* 單字本 service worker：App 本身離線可開；後台、查字、輸入建議、發音一律走網路 */
+const VERSION = 'vocab-v6';
 const SHELL = [
   './',
   './index.html',
@@ -28,7 +28,7 @@ self.addEventListener('fetch', e => {
   const url = new URL(req.url);
 
   // 動態資料不快取
-  if (/script\.google(usercontent)?\.com|datamuse\.com/.test(url.hostname)) return;
+  if (/script\.google(usercontent)?\.com|datamuse\.com|youdao\.com/.test(url.hostname)) return;
 
   // 頁面：先網路，離線才用快取
   if (req.mode === 'navigate') {

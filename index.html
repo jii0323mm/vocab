@@ -143,6 +143,9 @@ main{padding-top:18px}
 .front .boxtag{position:absolute;top:14px;left:16px;font-size:12px;color:var(--graphite)}
 .front .tap{position:absolute;bottom:16px;left:0;right:0;font-size:13px;color:#A3A6AC}
 .back{transform:rotateY(180deg)}
+/* iPhone Safari 有時不吃 backface-visibility，直接把看不到的那面藏起來 */
+.flip .back,.flip.on .front{visibility:hidden}
+.flip.on .back{visibility:visible}
 .back .term{font-size:26px}
 .grade{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .grade button{border:1px solid var(--rule);background:var(--card);border-radius:14px;padding:15px 6px;font-size:16px;font-weight:600}
@@ -277,7 +280,7 @@ nav .badge{position:absolute;top:6px;left:calc(50% + 6px);background:var(--coral
     </div>
     <div class="block">
       <h2>發音聲音</h2>
-      <p>用這台裝置內建的美式英文聲音。聽起來怪怪的話，換一個試試；每台裝置可以各自選。</p>
+      <p>預設用「真人錄音」（美式，要有網路）；沒網路時自動改用這台裝置的聲音。也可以改選裝置聲音，每台裝置各自設定。</p>
       <div class="voicerow"><select id="myvoice" class="sel"></select><button class="btn" id="voicetest">試聽</button></div>
     </div>
     <div class="block">
@@ -678,7 +681,27 @@ function pickVoice(){
 }
 try{ speechSynthesis.onvoiceschanged = () => { if(tab === 'me') renderVoices(); }; speechSynthesis.getVoices(); }catch(e){}
 
+const REC = '__rec__';   // 真人錄音
+let curAudio = null;
 function speak(term){
+  const saved = store.get(VKEY, '');
+  if((!saved || saved === REC) && navigator.onLine !== false){
+    try{
+      try{ speechSynthesis.cancel(); }catch(e){}
+      if(curAudio) curAudio.pause();
+      const a = new Audio('https://dict.youdao.com/dictvoice?type=2&audio=' + encodeURIComponent(term));
+      curAudio = a;
+      let fell = false;
+      const fallback = () => { if(fell || curAudio !== a) return; fell = true; curAudio = null; ttsSpeak(term); };
+      a.onerror = fallback;
+      const p = a.play(); if(p && p.catch) p.catch(fallback);
+      return;
+    }catch(e){}
+  }
+  ttsSpeak(term);
+}
+function ttsSpeak(term){
+  if(curAudio){ curAudio.pause(); curAudio = null; }
   try{
     const u = new SpeechSynthesisUtterance(term); u.lang = 'en-US'; u.rate = .9;
     const v = pickVoice(); if(v) u.voice = v;
@@ -968,11 +991,12 @@ function renderMe(){
   renderVoices();
 }
 function renderVoices(){
-  const sel = $('#myvoice'), list = usVoices(), cur = pickVoice();
-  if(!list.length){ sel.innerHTML = '<option>這台裝置沒有美式英文聲音</option>'; sel.disabled = true; return; }
+  const sel = $('#myvoice'), list = usVoices(), saved = store.get(VKEY, '');
   sel.disabled = false;
-  sel.innerHTML = list.map(v => `<option value="${esc(v.voiceURI)}">${esc(v.name)}${v.localService ? '' : '（線上）'}</option>`).join('');
-  if(cur) sel.value = cur.voiceURI;
+  sel.innerHTML = `<option value="${REC}">真人錄音（推薦）</option>` +
+    list.map(v => `<option value="${esc(v.voiceURI)}">裝置聲音：${esc(v.name)}${v.localService ? '' : '（線上）'}</option>`).join('');
+  const cur = saved && saved !== REC ? pickVoice() : null;
+  sel.value = cur ? cur.voiceURI : REC;
 }
 $('#myvoice').onchange = () => { store.set(VKEY, $('#myvoice').value); speak('Nice to meet you.'); };
 $('#voicetest').onclick = () => speak('Nice to meet you. This is how I sound.');
