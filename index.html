@@ -200,6 +200,13 @@ nav .badge{position:absolute;top:6px;left:calc(50% + 6px);background:var(--coral
 .flip.tall .back{justify-content:flex-start}
 .back .morebtn{margin-top:auto;padding-top:14px}
 .cardmore{margin-top:4px}
+/* 背面：沒展開時跟正面一樣置中大字，點「更多」才改成靠左的詳細排版 */
+.flip:not(.tall) .back{align-items:center;text-align:center;justify-content:center}
+.flip:not(.tall) .backtop{flex-direction:column;gap:12px}
+.flip:not(.tall) .back .term{font-size:42px}
+.flip:not(.tall) .back .phon{font-size:17px;margin-top:14px}
+.flip:not(.tall) .back .mainzh{font-size:26px;margin-top:8px;line-height:1.4}
+.flip:not(.tall) .back .morebtn{position:absolute;bottom:12px;left:0;right:0;margin:0 auto;padding:6px 0;width:max-content}
 .voicerow{display:flex;gap:8px}
 .voicerow .sel{flex:1;min-width:0}
 .practice{margin-top:26px;padding-top:18px;border-top:1px dashed var(--rule)}
