@@ -194,6 +194,8 @@ nav .badge{position:absolute;top:6px;left:calc(50% + 6px);background:var(--coral
       <input id="apass" name="password" type="password" autocomplete="current-password" required></label>
     <label class="field" id="pass2wrap" hidden><span>再輸入一次密碼</span>
       <input id="apass2" type="password" autocomplete="new-password"></label>
+    <label class="field" id="invitewrap" hidden><span>邀請碼（跟皓鈞要）</span>
+      <input id="ainvite" autocomplete="off" autocapitalize="off" spellcheck="false"></label>
     <button class="btn primary" id="authbtn" type="submit">登入</button>
     <div class="err" id="autherr" role="alert"></div>
     <div class="switch" id="authswitch">還沒有帳號？<button type="button" id="toreg">註冊一個</button></div>
@@ -347,9 +349,10 @@ let regMode = false;
 function setRegMode(on){
   regMode = on;
   $('#authtitle').textContent = on ? '註冊新帳號' : '登入單字本';
-  $('#authsub').textContent = on ? '名字 2～20 個字，密碼至少 6 個字。' : '手機和電腦登入同一個帳號，單字都會同步。';
+  $('#authsub').textContent = on ? '名字 2～20 個字，密碼至少 6 個字，需要邀請碼。' : '手機和電腦登入同一個帳號，單字都會同步。';
   $('#authbtn').textContent = on ? '註冊' : '登入';
   $('#pass2wrap').hidden = !on;
+  $('#invitewrap').hidden = !on;
   $('#apass').autocomplete = on ? 'new-password' : 'current-password';
   $('#authswitch').innerHTML = on
     ? '已經有帳號？<button type="button" id="toreg">回到登入</button>'
@@ -367,7 +370,7 @@ $('#authform').addEventListener('submit', async e => {
   btn.innerHTML = '<span class="spin"></span>' + (regMode ? '註冊中' : '登入中');
   $('#autherr').textContent = '';
   try{
-    const r = await api(regMode ? 'register' : 'login', { name, password: pw });
+    const r = await api(regMode ? 'register' : 'login', { name, password: pw, invite: $('#ainvite').value.trim() });
     session = { name: r.name, token: r.token };
     store.set(SKEY, session);
     $('#apass').value = ''; $('#apass2').value = '';
