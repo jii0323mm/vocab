@@ -655,8 +655,10 @@ function moreHtml(w){
 const VKEY = 'vocab2.voice';
 const GOOD_VOICES = [/Samantha/i, /\bAva\b/i, /Allison/i, /Google US English/i, /Aria.*Natural/i,
   /Jenny.*Natural/i, /Guy.*Natural/i, /\bAria\b/i, /\bJenny\b/i, /Susan/i, /\bAlex\b/i, /Zira/i];
+// Mac 內建的特效／機器人聲音，不適合學發音
+const NOVELTY = /^(Albert|Bad News|Bahh|Bells|Boing|Bubbles|Cellos|Good News|Jester|Organ|Superstar|Trinoids|Whisper|Wobble|Zarvox|Junior|Ralph|Fred|Kathy|Grandma|Grandpa)\b/i;
 function usVoices(){
-  try{ return speechSynthesis.getVoices().filter(v => /^en[-_]US/i.test(v.lang)); }catch(e){ return []; }
+  try{ return speechSynthesis.getVoices().filter(v => /^en[-_]US/i.test(v.lang) && !NOVELTY.test(v.name)); }catch(e){ return []; }
 }
 function pickVoice(){
   const list = usVoices(); if(!list.length) return null;
