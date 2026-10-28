@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>單字本</title>
-<meta name="description" content="記下不會的英文單字，自動補上詞性、意思和例句，然後照間隔複習。">
+<meta name="description" content="記下不會的英文單字，自動補上 KK 音標、詞性、意思和例句，用 8 格間歇式記憶法複習。">
 <link rel="manifest" href="./manifest.json">
 <meta name="theme-color" content="#FAFAF7">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -17,971 +17,515 @@
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&display=swap" rel="stylesheet">
 <style>
 :root{
-  --paper:#FAFAF7;
-  --card:#FFFFFF;
-  --ink:#15171C;
-  --graphite:#6A6F78;
-  --rule:#E6E5DE;
-  --mark:#FFE25C;
-  --mint:#8FE0BE;
-  --coral:#FF6B5A;
-  --r:14px;
+  --paper:#FAFAF7; --card:#FFFFFF; --ink:#15171C; --graphite:#6A6F78; --rule:#E6E5DE;
+  --mark:#FFE25C; --mint:#8FE0BE; --coral:#FF6B5A; --soft:#F1F0EA; --r:14px;
   --sans:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif;
   --serif:"Fraunces",Georgia,"Times New Roman",serif;
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;padding:0}
-body{
-  background:var(--paper);color:var(--ink);font-family:var(--sans);
-  font-size:16px;line-height:1.55;
-  padding-bottom:calc(78px + env(safe-area-inset-bottom));
-  -webkit-font-smoothing:antialiased;
-}
+body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased}
+body.authed{padding-bottom:calc(78px + env(safe-area-inset-bottom))}
 button{font-family:inherit;font-size:inherit;color:inherit;cursor:pointer}
 input,textarea{font-family:inherit;font-size:16px;color:inherit}
 :focus-visible{outline:2px solid var(--ink);outline-offset:2px;border-radius:4px}
+[hidden]{display:none !important}
 
-/* ---------- shell ---------- */
 .wrap{max-width:620px;margin:0 auto;padding:0 16px}
-header{
-  position:sticky;top:0;z-index:20;background:var(--paper);
-  padding-top:calc(10px + env(safe-area-inset-top));
-  border-bottom:1px solid var(--rule);
-}
+header{position:sticky;top:0;z-index:20;background:var(--paper);padding-top:calc(10px + env(safe-area-inset-top));border-bottom:1px solid var(--rule)}
 .head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding-bottom:10px}
-.head h1{font-family:var(--serif);font-size:22px;font-weight:600;margin:0;letter-spacing:-.01em}
-.head .count{font-size:13px;color:var(--graphite);font-variant-numeric:tabular-nums}
+.head h1{font-family:var(--serif);font-size:22px;font-weight:600;margin:0}
+.head .who{font-size:13px;color:var(--graphite)}
 main{padding-top:18px}
-.view[hidden]{display:none}
 
-/* ---------- add box ---------- */
-.adder{display:flex;gap:8px;margin-bottom:18px}
-.adder input{
-  flex:1;min-width:0;background:var(--card);border:1px solid var(--rule);
-  border-radius:var(--r);padding:14px 15px;font-family:var(--serif);font-size:19px;
-}
-.adder input::placeholder{font-family:var(--sans);font-size:15px;color:#9A9EA5}
-.adder button{
-  background:var(--ink);color:var(--paper);border:0;border-radius:var(--r);
-  padding:0 20px;font-weight:600;font-size:15px;flex:none;
-}
-.adder button:disabled{opacity:.4}
-
-/* ---------- filters ---------- */
-.filters{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}
-.filters button{
-  background:transparent;border:1px solid var(--rule);border-radius:999px;
-  padding:5px 13px;font-size:13.5px;color:var(--graphite);
-}
-.filters button[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--paper)}
-
-/* ---------- word card ---------- */
-.card{
-  background:var(--card);border:1px solid var(--rule);border-radius:var(--r);
-  padding:16px 16px 13px;margin-bottom:12px;
-}
-.card.flash{animation:flash .9s ease}
-@keyframes flash{0%,100%{background:var(--card)}30%{background:#FFF9DF}}
-
-.termline{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+/* 螢光筆 */
 .termwrap{position:relative;display:inline-block;padding:0 2px}
-.marker{
-  position:absolute;left:-3px;right:-5px;top:.42em;bottom:.02em;
-  background:var(--mark);border-radius:3px 9px 4px 7px;
-  transform:rotate(-1.3deg) skewX(-9deg);transform-origin:left center;
-  z-index:0;
-}
-.term{position:relative;z-index:1;font-family:var(--serif);font-size:27px;font-weight:600;letter-spacing:-.015em;word-break:break-word}
-.speak{
-  flex:none;background:transparent;border:1px solid var(--rule);border-radius:999px;
-  width:36px;height:36px;display:grid;place-items:center;font-size:15px;color:var(--graphite);margin-top:2px;
-}
-.phon{font-family:var(--serif);font-size:14.5px;color:var(--graphite);margin-top:6px}
+.marker{position:absolute;left:-3px;right:-5px;top:.42em;bottom:.02em;background:var(--mark);border-radius:3px 9px 4px 7px;transform:rotate(-1.3deg) skewX(-9deg);z-index:0}
+.term{position:relative;z-index:1;font-family:var(--serif);font-weight:600;letter-spacing:-.015em;word-break:break-word}
 
-.sense{margin-top:12px;padding-top:12px;border-top:1px dashed var(--rule)}
-.sense:first-of-type{border-top:0;padding-top:0}
-.pos{
-  display:inline-block;background:#F1F0EA;border-radius:5px;
-  padding:1px 7px;font-size:12.5px;color:var(--graphite);margin-right:7px;vertical-align:2px;
-}
-.zh{font-size:16.5px}
-.def{font-size:14px;color:var(--graphite);margin-top:4px;line-height:1.5}
-.ex{margin-top:10px;padding-left:11px;border-left:2px solid var(--mark)}
-.ex q{font-family:var(--serif);font-size:15.5px;font-style:italic;quotes:none;display:block}
-.ex .exzh{font-size:14px;color:var(--graphite);margin-top:2px}
-.note{margin-top:10px;font-size:14px;color:var(--graphite)}
+/* 按鈕 */
+.btn{border:1px solid var(--rule);background:var(--card);border-radius:12px;padding:11px 18px;font-size:15px}
+.btn.primary{background:var(--ink);color:var(--paper);border-color:var(--ink);font-weight:600}
+.btn.ghost{background:transparent}
+.btn:disabled{opacity:.45}
 
-.meta{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:14px;padding-top:11px;border-top:1px solid var(--rule)}
-.dots{display:flex;gap:4px;align-items:center}
-.dot{width:7px;height:7px;border-radius:2px;background:var(--rule);transform:skewX(-9deg)}
-.dot.on{background:var(--mark)}
-.dot.full{background:var(--mint)}
-.due{font-size:12.5px;color:var(--graphite);margin-left:8px}
-.acts{display:flex;gap:4px}
-.acts button{background:transparent;border:0;padding:4px 8px;font-size:13px;color:var(--graphite)}
-.acts button.del:active{color:var(--coral)}
+/* 登入 */
+.auth{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px 16px}
+.authbox{width:100%;max-width:360px}
+.authbox .logo{font-size:44px;margin-bottom:6px}
+.authbox h2{font-family:var(--serif);font-size:30px;margin:0 0 4px;font-weight:600}
+.authbox p.sub{color:var(--graphite);font-size:14.5px;margin:0 0 26px}
+.field{display:block;margin-bottom:12px}
+.field span{display:block;font-size:13px;color:var(--graphite);margin-bottom:5px}
+.field input{width:100%;background:var(--card);border:1px solid var(--rule);border-radius:12px;padding:13px 14px}
+.authbox .btn.primary{width:100%;padding:14px;margin-top:6px}
+.switch{text-align:center;margin-top:18px;font-size:14px;color:var(--graphite)}
+.switch button{background:none;border:0;color:var(--ink);font-weight:600;text-decoration:underline;padding:0 2px}
+.err{color:var(--coral);font-size:14px;min-height:21px;margin-top:10px}
 
-.status{font-size:13px;color:var(--graphite);margin-top:8px}
-.status.err{color:var(--coral)}
-.retry{background:transparent;border:1px solid var(--rule);border-radius:8px;padding:3px 10px;font-size:13px;margin-left:6px}
+/* 加字 */
+.adderwrap{position:relative;margin-bottom:16px}
+.adder{display:flex;gap:8px}
+.adder input{flex:1;min-width:0;background:var(--card);border:1px solid var(--rule);border-radius:var(--r);padding:14px 15px;font-family:var(--serif);font-size:19px}
+.adder input::placeholder{font-family:var(--sans);font-size:15px;color:#9A9EA5}
+.adder button{background:var(--ink);color:var(--paper);border:0;border-radius:var(--r);padding:0 20px;font-weight:600;font-size:15px;flex:none}
+.adder button:disabled{opacity:.45}
+.sugs{position:absolute;left:0;right:0;top:calc(100% + 6px);z-index:40;background:var(--card);border:1px solid var(--rule);border-radius:12px;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,.07)}
+.sugs button{display:block;width:100%;text-align:left;background:transparent;border:0;border-bottom:1px solid var(--rule);padding:12px 15px;font-family:var(--serif);font-size:17px}
+.sugs button:last-child{border-bottom:0}
+.sugs button.sel,.sugs button:hover{background:#F6F5F0}
+.adding{font-size:13.5px;color:var(--graphite);margin:-6px 0 14px}
 
-/* ---------- editor ---------- */
-.editor{margin-top:12px;padding-top:12px;border-top:1px solid var(--rule);display:grid;gap:9px}
-.editor label{font-size:12.5px;color:var(--graphite)}
-.editor input,.editor textarea{
-  width:100%;background:var(--paper);border:1px solid var(--rule);border-radius:9px;
-  padding:9px 11px;resize:vertical;line-height:1.45;
-}
-.editor .row{display:flex;gap:8px;justify-content:flex-end;margin-top:2px}
-.editor .row button{border:1px solid var(--rule);background:transparent;border-radius:9px;padding:7px 15px;font-size:14px}
-.editor .row button.save{background:var(--ink);color:var(--paper);border-color:var(--ink);font-weight:600}
+/* 8 格 */
+.boxes{display:grid;grid-template-columns:repeat(9,1fr);gap:5px;margin-bottom:18px}
+.bx{background:var(--card);border:1px solid var(--rule);border-radius:10px;padding:8px 0 7px;text-align:center;position:relative;overflow:hidden}
+.bx b{display:block;font-family:var(--serif);font-size:19px;line-height:1.1;position:relative}
+.bx span{display:block;font-size:10.5px;color:var(--graphite);margin-top:2px;position:relative;white-space:nowrap}
+.bx i{position:absolute;left:0;right:0;bottom:0;background:var(--mark);opacity:.55}
+.bx.done i{background:var(--mint)}
+.bx[aria-pressed="true"]{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
+.bx.zero b{color:#C2C4C8}
+.boxhint{display:flex;justify-content:space-between;font-size:12px;color:var(--graphite);margin:-10px 2px 16px}
 
-/* ---------- empty ---------- */
-.empty{text-align:center;padding:52px 20px;color:var(--graphite)}
+/* 清單 */
+.listhead{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px}
+.listhead h3{margin:0;font-size:14px;color:var(--graphite);font-weight:500}
+.listhead button{background:none;border:0;font-size:13px;color:var(--graphite);text-decoration:underline}
+.row{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:var(--card);border:1px solid var(--rule);border-radius:12px;padding:12px 14px;margin-bottom:8px}
+.row .t{flex:1;min-width:0}
+.row .term{font-size:19px}
+.row .zh{display:block;font-size:14px;color:var(--graphite);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chip{flex:none;font-size:12px;padding:2px 9px;border-radius:999px;background:var(--soft);color:var(--graphite)}
+.chip.due{background:#FFF1D0;color:#8A6400}
+.chip.done{background:#E3F6EC;color:#2E7D5B}
+.empty{text-align:center;padding:44px 20px;color:var(--graphite)}
 .empty .big{font-family:var(--serif);font-size:21px;color:var(--ink);margin-bottom:8px}
 .empty p{font-size:14.5px;margin:0;line-height:1.6}
 
-/* ---------- review ---------- */
-.rev-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;font-size:13px;color:var(--graphite)}
+/* 字卡內容（背面／詳細） */
+.phon{font-family:var(--serif);font-size:15px;color:var(--graphite)}
+.mainzh{font-size:19px;margin-top:6px}
+.sense{margin-top:12px;padding-top:12px;border-top:1px dashed var(--rule)}
+.pos{display:inline-block;background:var(--soft);border-radius:5px;padding:1px 7px;font-size:12.5px;color:var(--graphite);margin-right:7px;vertical-align:2px}
+.def{font-size:14px;color:var(--graphite);margin-top:4px;line-height:1.5}
+.forms{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+.forms span{background:var(--soft);border-radius:6px;padding:2px 9px;font-size:13px;color:var(--graphite)}
+.forms span b{font-family:var(--serif);font-weight:600;color:var(--ink);margin-left:6px}
+.ex{margin-top:12px;padding-left:11px;border-left:2px solid var(--mark)}
+.ex q{font-family:var(--serif);font-size:15.5px;font-style:italic;quotes:none;display:block}
+.ex .exzh{font-size:14px;color:var(--graphite);margin-top:2px}
+.note{margin-top:12px;font-size:14px;background:#FFFBEA;border-radius:8px;padding:8px 11px}
+
+/* 詳細頁（底部抽屜） */
+.sheet{position:fixed;inset:0;z-index:60;background:rgba(21,23,28,.35);display:flex;align-items:flex-end;justify-content:center}
+.sheetin{background:var(--paper);width:100%;max-width:620px;max-height:88vh;overflow:auto;border-radius:20px 20px 0 0;padding:20px 18px calc(22px + env(safe-area-inset-bottom))}
+.sheettop{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.sheettop .term{font-size:32px}
+.iconbtn{flex:none;background:transparent;border:1px solid var(--rule);border-radius:999px;width:38px;height:38px;display:grid;place-items:center;font-size:15px;color:var(--graphite)}
+.meta{font-size:13px;color:var(--graphite);margin-top:14px;padding-top:12px;border-top:1px solid var(--rule)}
+.acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.acts .btn{padding:9px 15px;font-size:14px}
+.acts .del{color:var(--coral)}
+.editor{display:grid;gap:10px;margin-top:14px}
+.editor label{font-size:12.5px;color:var(--graphite)}
+.editor input,.editor textarea{width:100%;background:var(--card);border:1px solid var(--rule);border-radius:10px;padding:9px 11px;resize:vertical;line-height:1.45}
+
+/* 複習：翻面字卡 */
+.rev-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;font-size:13px;color:var(--graphite)}
 .rev-bar{height:3px;background:var(--rule);border-radius:2px;overflow:hidden;flex:1;margin-left:14px}
 .rev-bar i{display:block;height:100%;background:var(--ink);transition:width .35s ease}
-.rcard{
-  background:var(--card);border:1px solid var(--rule);border-radius:var(--r);
-  padding:40px 20px;text-align:center;min-height:250px;
-  display:flex;flex-direction:column;align-items:center;justify-content:center;
-}
-.rcard .termwrap{margin-bottom:4px}
-.rcard .term{font-size:40px}
-.rcard .marker.wipe{animation:wipe .5s cubic-bezier(.5,0,.2,1) forwards}
-@keyframes wipe{to{transform:rotate(-1.3deg) skewX(-9deg) scaleX(0);opacity:0}}
-.answer{margin-top:20px;width:100%;max-width:420px;text-align:left}
-.reveal{
-  margin-top:26px;background:transparent;border:1px solid var(--rule);
-  border-radius:999px;padding:11px 26px;font-size:15px;color:var(--graphite);
-}
-.grade{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px}
-.grade button{border:1px solid var(--rule);background:var(--card);border-radius:12px;padding:14px 6px;font-size:14.5px;font-weight:500}
-.grade button.g2{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.flip{perspective:1400px;cursor:pointer;margin-bottom:14px}
+.flipin{position:relative;min-height:360px;transition:transform .55s cubic-bezier(.3,.7,.3,1);transform-style:preserve-3d}
+.flip.on .flipin{transform:rotateY(180deg)}
+.face{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;background:var(--card);border:1px solid var(--rule);border-radius:18px;padding:26px 20px;overflow:auto}
+.front{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+.front .term{font-size:42px}
+.front .boxtag{position:absolute;top:14px;left:16px;font-size:12px;color:var(--graphite)}
+.front .tap{position:absolute;bottom:16px;left:0;right:0;font-size:13px;color:#A3A6AC}
+.back{transform:rotateY(180deg)}
+.back .term{font-size:26px}
+.grade{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.grade button{border:1px solid var(--rule);background:var(--card);border-radius:14px;padding:15px 6px;font-size:16px;font-weight:600}
+.grade .no{color:var(--coral)}
+.grade .yes{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.grade small{display:block;font-weight:400;font-size:12px;opacity:.7;margin-top:2px}
+.speakrow{display:flex;justify-content:center;margin-top:18px}
 
-/* ---------- more ---------- */
-.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:22px}
+/* 我的 */
+.block{background:var(--card);border:1px solid var(--rule);border-radius:var(--r);padding:16px;margin-bottom:12px}
+.block h2{font-size:15px;margin:0 0 8px;font-weight:600}
+.block p{font-size:14px;color:var(--graphite);margin:0 0 10px;line-height:1.6}
+.block p:last-child{margin-bottom:0}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px}
 .stat{background:var(--card);border:1px solid var(--rule);border-radius:var(--r);padding:14px}
 .stat b{display:block;font-family:var(--serif);font-size:26px;font-weight:600;line-height:1.1}
 .stat span{font-size:12.5px;color:var(--graphite)}
-.block{background:var(--card);border:1px solid var(--rule);border-radius:var(--r);padding:16px;margin-bottom:12px}
-.block h2{font-size:15px;margin:0 0 6px;font-weight:600}
-.block p{font-size:14px;color:var(--graphite);margin:0 0 12px;line-height:1.6}
-.block p:last-child{margin-bottom:0}
-.btns{display:flex;gap:8px;flex-wrap:wrap}
-.btns button{border:1px solid var(--rule);background:var(--paper);border-radius:10px;padding:9px 16px;font-size:14px}
-.btns button.primary{background:var(--ink);color:var(--paper);border-color:var(--ink);font-weight:600}
+.tbl{width:100%;border-collapse:collapse;font-size:14px}
+.tbl td{padding:6px 0;border-bottom:1px solid var(--rule)}
+.tbl td:last-child{text-align:right;font-variant-numeric:tabular-nums}
 
-/* ---------- nav ---------- */
-nav{
-  position:fixed;left:0;right:0;bottom:0;z-index:30;
-  background:rgba(250,250,247,.94);backdrop-filter:blur(12px);
-  border-top:1px solid var(--rule);
-  padding-bottom:env(safe-area-inset-bottom);
-}
+/* 底部選單 */
+nav{position:fixed;left:0;right:0;bottom:0;z-index:30;background:rgba(250,250,247,.95);backdrop-filter:blur(12px);border-top:1px solid var(--rule);padding-bottom:env(safe-area-inset-bottom)}
 .navin{max-width:620px;margin:0 auto;display:grid;grid-template-columns:repeat(3,1fr)}
-nav button{background:transparent;border:0;padding:11px 0 12px;font-size:12.5px;color:var(--graphite);display:grid;gap:3px;justify-items:center}
+nav button{background:transparent;border:0;padding:11px 0 12px;font-size:12.5px;color:var(--graphite);display:grid;gap:3px;justify-items:center;position:relative}
 nav button .ico{font-size:19px;line-height:1}
 nav button[aria-current="page"]{color:var(--ink);font-weight:600}
-nav .badge{
-  position:absolute;transform:translate(14px,-4px);background:var(--coral);color:#fff;
-  border-radius:999px;font-size:10.5px;padding:0 5px;line-height:15px;height:15px;font-weight:600;
-}
+nav .badge{position:absolute;top:6px;left:calc(50% + 6px);background:var(--coral);color:#fff;border-radius:999px;font-size:10.5px;padding:0 5px;line-height:15px;height:15px;font-weight:600}
 
-/* ---------- toast ---------- */
-#toast{
-  position:fixed;left:50%;bottom:calc(92px + env(safe-area-inset-bottom));
-  transform:translate(-50%,10px);background:var(--ink);color:var(--paper);
-  padding:10px 18px;border-radius:999px;font-size:14px;z-index:50;
-  opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;max-width:90vw;text-align:center;
-}
+#toast{position:fixed;left:50%;bottom:calc(92px + env(safe-area-inset-bottom));transform:translate(-50%,10px);background:var(--ink);color:var(--paper);padding:10px 18px;border-radius:999px;font-size:14px;z-index:80;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;max-width:90vw;text-align:center}
 #toast.show{opacity:1;transform:translate(-50%,0)}
-
-.warnbar{background:#FFF4D6;border:1px solid #F0DFA8;border-radius:10px;padding:10px 13px;font-size:13.5px;margin-bottom:14px;color:#6b5a20}
-
-.adderwrap{position:relative;margin-bottom:18px}
-.adderwrap .adder{margin-bottom:0}
-.sugs{
-  position:absolute;left:0;right:0;top:calc(100% + 6px);z-index:40;
-  background:var(--card);border:1px solid var(--rule);border-radius:12px;
-  overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,.07);
-}
-.sugs button{
-  display:block;width:100%;text-align:left;background:transparent;border:0;
-  border-bottom:1px solid var(--rule);padding:12px 15px;
-  font-family:var(--serif);font-size:17px;
-}
-.sugs button:last-child{border-bottom:0}
-.sugs button.sel,.sugs button:hover{background:#F6F5F0}
-
-.src{
-  display:inline-block;margin-top:8px;font-size:11.5px;padding:1px 8px;
-  border-radius:5px;background:#E8F3EC;color:#2E7D5B;
-}
-.src.alt{background:#F1F0EA;color:var(--graphite)}
-.srcnote{margin-top:10px;font-size:12.5px;color:var(--coral);line-height:1.5}
-
-.forms{display:flex;flex-wrap:wrap;gap:6px;margin-top:11px}
-.forms span{background:#F1F0EA;border-radius:6px;padding:2px 9px;font-size:13px;color:var(--graphite)}
-.forms span b{font-family:var(--serif);font-weight:600;color:var(--ink);margin-left:6px}
-
-.keyrow{display:flex;gap:8px;margin-bottom:9px}
-.keyrow input{
-  flex:1;min-width:0;background:var(--paper);border:1px solid var(--rule);
-  border-radius:10px;padding:10px 12px;font-size:14px;
-}
-.keyrow button{
-  flex:none;background:var(--ink);color:var(--paper);border:1px solid var(--ink);
-  border-radius:10px;padding:9px 17px;font-size:14px;font-weight:600;
-}
-.keystate{font-size:13px;margin-top:9px;color:var(--graphite);line-height:1.5}
-.keystate.ok{color:#2E7D5B}
-.keystate.bad{color:var(--coral)}
-
-@media (prefers-reduced-motion:reduce){
-  *{animation-duration:.01ms !important;transition-duration:.01ms !important}
-}
+.spin{display:inline-block;width:14px;height:14px;border:2px solid var(--rule);border-top-color:var(--ink);border-radius:50%;animation:sp .8s linear infinite;vertical-align:-2px;margin-right:6px}
+@keyframes sp{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.01ms !important;transition-duration:.01ms !important}}
+@media (max-width:380px){.bx span{font-size:9.5px}.bx b{font-size:17px}}
 </style>
 </head>
 <body>
 
+<!-- ============ 登入 ============ -->
+<section class="auth" id="authview" hidden>
+  <form class="authbox" id="authform" autocomplete="on">
+    <div class="logo"><span class="termwrap"><i class="marker"></i><span class="term">A</span></span></div>
+    <h2 id="authtitle">登入單字本</h2>
+    <p class="sub" id="authsub">手機和電腦登入同一個帳號，單字都會同步。</p>
+    <label class="field"><span>名字</span>
+      <input id="aname" name="username" autocomplete="username" autocapitalize="off" required></label>
+    <label class="field"><span>密碼</span>
+      <input id="apass" name="password" type="password" autocomplete="current-password" required></label>
+    <label class="field" id="pass2wrap" hidden><span>再輸入一次密碼</span>
+      <input id="apass2" type="password" autocomplete="new-password"></label>
+    <button class="btn primary" id="authbtn" type="submit">登入</button>
+    <div class="err" id="autherr" role="alert"></div>
+    <div class="switch" id="authswitch">還沒有帳號？<button type="button" id="toreg">註冊一個</button></div>
+  </form>
+</section>
+
+<!-- ============ 主畫面 ============ -->
+<div id="appview" hidden>
 <header>
   <div class="wrap head">
     <h1>單字本</h1>
-    <span class="count" id="headcount"></span>
+    <span class="who" id="who"></span>
   </div>
 </header>
 
 <main class="wrap">
-
-  <!-- ============ 單字本 ============ -->
-  <section class="view" id="v-list">
-    <div id="storagewarn"></div>
+  <section id="v-list">
     <div class="adderwrap">
       <div class="adder">
-        <input id="newword" type="text" inputmode="text" autocapitalize="off" autocorrect="off"
-               spellcheck="false" autocomplete="off" placeholder="輸入不會的單字或片語" enterkeyhint="done">
+        <input id="newword" type="text" autocapitalize="off" autocorrect="off" spellcheck="false"
+               autocomplete="off" placeholder="輸入不會的單字或片語" enterkeyhint="done">
         <button id="addbtn">加入</button>
       </div>
       <div class="sugs" id="sugs" hidden></div>
     </div>
-    <div class="filters">
-      <button data-f="all" aria-pressed="true">全部</button>
-      <button data-f="due" aria-pressed="false">待複習</button>
-      <button data-f="new" aria-pressed="false">還不熟</button>
-      <button data-f="done" aria-pressed="false">已熟</button>
-    </div>
+    <div class="adding" id="adding" hidden></div>
+
+    <div class="boxes" id="boxes"></div>
+    <div class="boxhint"><span>← 剛加入、常複習</span><span>記牢了 →</span></div>
+
+    <div class="listhead"><h3 id="listtitle"></h3><button id="clearfilter" hidden>看全部</button></div>
     <div id="listbody"></div>
   </section>
 
-  <!-- ============ 複習 ============ -->
-  <section class="view" id="v-review" hidden></section>
+  <section id="v-review" hidden></section>
 
-  <!-- ============ 更多 ============ -->
-  <section class="view" id="v-more" hidden>
+  <section id="v-me" hidden>
     <div class="stats" id="stats"></div>
-
     <div class="block">
-      <h2>備份你的單字</h2>
-      <p>單字存在這支手機的瀏覽器裡，沒有雲端。換手機、清除瀏覽器資料都會不見，記得偶爾匯出一份。</p>
-      <div class="btns">
-        <button class="primary" id="exportbtn">匯出備份檔</button>
-        <button id="importbtn">從備份檔匯入</button>
-        <input type="file" id="importfile" accept="application/json,.json" hidden>
-      </div>
+      <h2>各格單字數</h2>
+      <table class="tbl" id="boxtable"></table>
     </div>
-
+    <div class="block">
+      <h2>複習怎麼運作</h2>
+      <p>新加的字放在第 1 格。答對就往後移一格，間隔變長；答錯就往前退一格，間隔變短。</p>
+      <p>8 格的間隔：1 天、3 天、7 天、14 天、1 個月、3 個月、半年、1 年。第 8 格再答對就算畢業，不再出題。</p>
+    </div>
     <div class="block">
       <h2>加到手機桌面</h2>
       <p>iPhone：用 Safari 打開這個網址，點下方分享鍵，選「加入主畫面」。</p>
-      <p>Android：用 Chrome 打開，點右上角選單，選「安裝應用程式」或「加到主畫面」。</p>
-      <div class="btns" id="installwrap" hidden>
-        <button class="primary" id="installbtn">直接安裝</button>
-      </div>
+      <p>Android：用 Chrome 打開，點右上角選單，選「安裝應用程式」。</p>
+      <button class="btn primary" id="installbtn" hidden>直接安裝</button>
     </div>
-
     <div class="block">
-      <h2>用 Gemini 查單字</h2>
-      <p>貼上你自己的 Gemini API 金鑰，查詢會快很多，而且一次就拿到繁體意思、所有詞性、詞形變化和例句。音標是 KK 音標，片語和慣用語也查得到。金鑰只存在這台裝置的瀏覽器裡，不會上傳到 GitHub。</p>
-      <div class="keyrow">
-        <input id="gemkey" type="password" autocomplete="off" placeholder="貼上 Gemini API 金鑰">
-        <button id="savekey">儲存</button>
+      <h2>帳號</h2>
+      <p id="meline"></p>
+      <div class="acts">
+        <button class="btn" id="pwbtn">改密碼</button>
+        <button class="btn" id="logoutbtn">登出</button>
       </div>
-      <div class="keyrow">
-        <input id="gemmodel" type="text" autocomplete="off" spellcheck="false" placeholder="gemini-3.5-flash">
-      </div>
-      <div class="btns">
-        <button id="testkey">測試金鑰</button>
-        <button id="clearkey">清除金鑰</button>
-      </div>
-      <div class="keystate" id="keystate"></div>
-      <p style="margin-top:12px">還沒有金鑰的話，到 <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Google AI Studio</a> 免費申請一把。建議開一把專用的，外洩了直接砍掉重發。</p>
-    </div>
-
-    <div class="block">
-      <h2>資料從哪來</h2>
-      <p>設了金鑰就走 Gemini。沒設的話，英文解釋和詞性來自 Free Dictionary API，連不上就改用 Wiktionary，中文是 MyMemory 翻完再轉成繁體。翻得怪的時候點單字卡上的「編輯」自己改，改完就是你自己的版本。</p>
-    </div>
-
-    <div class="block">
-      <h2>複習怎麼排</h2>
-      <p>答對一次隔 1 天再問你，接著是 2、4、7、15、30 天。答錯就退一級，10 分鐘後再出現。連續答對六次就算熟了，螢光筆也擦乾淨。</p>
-      <div class="btns">
-        <button id="clearbtn">清空全部單字</button>
-      </div>
+      <form class="editor" id="pwform" hidden>
+        <div><label for="oldpw">舊密碼</label><input id="oldpw" type="password" autocomplete="current-password"></div>
+        <div><label for="newpw">新密碼（至少 6 個字）</label><input id="newpw" type="password" autocomplete="new-password"></div>
+        <div class="acts"><button class="btn primary" type="submit">儲存新密碼</button></div>
+      </form>
     </div>
   </section>
-
 </main>
 
 <nav>
   <div class="navin">
     <button data-tab="list" aria-current="page"><span class="ico">✎</span>單字本</button>
     <button data-tab="review"><span class="ico">◪</span>複習<span class="badge" id="navbadge" hidden></span></button>
-    <button data-tab="more"><span class="ico">⋯</span>更多</button>
+    <button data-tab="me"><span class="ico">☺</span>我的</button>
   </div>
 </nav>
+</div>
 
+<div class="sheet" id="sheet" hidden><div class="sheetin" id="sheetin" role="dialog" aria-modal="true"></div></div>
 <div id="toast" role="status" aria-live="polite"></div>
 
 <script>
 (() => {
 'use strict';
 
-/* ========== 儲存 ========== */
-const KEY = 'vocab.v1';
-let memOnly = false;
-function load(){
-  try{
-    const raw = localStorage.getItem(KEY);
-    return raw ? JSON.parse(raw) : [];
-  }catch(e){ memOnly = true; return []; }
-}
-function save(){
-  if(memOnly) return;
-  try{ localStorage.setItem(KEY, JSON.stringify(words)); }
-  catch(e){ memOnly = true; toast('存不進去，瀏覽器空間可能滿了'); }
-}
-let words = load();
-
-/* ========== 設定（Gemini 金鑰只存在這台裝置） ========== */
-const DEFAULT_MODEL = 'gemini-3.5-flash';
-const SKEY = 'vocab.settings.v1';
-let settings = { key:'', model: DEFAULT_MODEL };
-let lastGeminiError = '';
-try{ Object.assign(settings, JSON.parse(localStorage.getItem(SKEY) || '{}')); }catch(e){}
-function saveSettings(){ try{ localStorage.setItem(SKEY, JSON.stringify(settings)); }catch(e){} }
-
-/* 簡轉繁：備援路線翻回來的中文可能是簡體，統一轉成台灣繁體 */
-let s2t = null, s2tTried = false;
-async function zhText(s){
-  if(!s) return s;
-  if(!s2tTried){
-    s2tTried = true;
-    try{
-      await new Promise((res, rej) => {
-        const sc = document.createElement('script');
-        sc.src = 'https://cdn.jsdelivr.net/npm/opencc-js@1.0.5/dist/umd/cn2t.js';
-        sc.onload = res; sc.onerror = rej;
-        document.head.appendChild(sc);
-      });
-      s2t = OpenCC.Converter({ from:'cn', to:'tw' });
-    }catch(e){ s2t = null; }
-  }
-  try{ return s2t ? s2t(s) : s; }catch(e){ return s; }
-}
-
-/* ========== 複習排程 ========== */
-const STEPS = [1, 2, 4, 7, 15, 30];  // 答對後隔幾天再問
-const MAX = STEPS.length;            // 連對 6 次 = 熟
+/* ================= 設定 ================= */
+const API = 'https://script.google.com/macros/s/AKfycbx9-RKsxftuuo1WTf6GkIdlOUpDBM0cG__wpavsfDTTPobQdMx8WwnbWk-sfWq9nqI-/exec';                       // Apps Script 網頁應用程式網址
+const BOXES = [1, 3, 7, 14, 30, 90, 180, 365];   // 要跟後台一致
+const MASTERED = BOXES.length + 1;
 const DAY = 86400000;
-const now = () => Date.now();
-const isDue = w => (w.due || 0) <= now();
+const BOXLABEL = ['1天', '3天', '7天', '14天', '1個月', '3個月', '半年', '1年'];
+const SKEY = 'vocab2.session', CKEY = n => 'vocab2.cache.' + n, QKEY = n => 'vocab2.queue.' + n;
 
-/* ========== 小工具 ========== */
+/* ================= 小工具 ================= */
 const $ = s => document.querySelector(s);
-const esc = s => String(s ?? '').replace(/[&<>"']/g, c =>
-  ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const store = {
+  get(k, d){ try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; }catch(e){ return d; } },
+  set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} },
+  del(k){ try{ localStorage.removeItem(k); }catch(e){} }
+};
 let toastTimer;
-function toast(msg){
+function toast(msg, ms){
   const t = $('#toast'); t.textContent = msg; t.classList.add('show');
-  clearTimeout(toastTimer); toastTimer = setTimeout(()=>t.classList.remove('show'), 2200);
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), ms || 2400);
 }
+const withTimeout = (p, ms) => Promise.race([p, new Promise((_, rj) => setTimeout(() => rj(new Error('timeout')), ms))]);
+
+async function api(action, data){
+  const body = Object.assign({ action }, data || {});
+  if(session && action !== 'login' && action !== 'register') body.token = session.token;
+  let res;
+  try{
+    // text/plain 避免 CORS 預檢，Apps Script 才收得到
+    res = await withTimeout(fetch(API, { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify(body) }), 45000);
+  }catch(e){
+    const err = new Error('連不上伺服器，檢查一下網路'); err.code = 'net'; throw err;
+  }
+  let j;
+  try{ j = await res.json(); }catch(e){ const err = new Error('伺服器回應怪怪的'); err.code = 'net'; throw err; }
+  if(!j.ok){
+    const err = new Error(j.error || '發生錯誤'); err.code = j.code || '';
+    if(err.code === 'auth' && action !== 'login'){ logout(true); }
+    throw err;
+  }
+  return j;
+}
+
+/* ================= 狀態 ================= */
+let session = store.get(SKEY, null);   // {name, token}
+let words = [];
+let boxFilter = 0;                      // 0 = 全部
+let tab = 'list';
+
+function saveCache(){ if(session) store.set(CKEY(session.name), words); }
+const isDue = w => w.box < MASTERED && w.due !== '' && Number(w.due) <= Date.now();
+const dueList = () => words.filter(isDue).sort((a, b) => a.box - b.box || a.due - b.due);
+
+function boxName(b){ return b >= MASTERED ? '已畢業' : '第 ' + b + ' 格'; }
 function dueText(w){
-  if(w.level >= MAX) return '已熟';
-  const d = (w.due||0) - now();
+  if(w.box >= MASTERED) return '已畢業';
+  const d = Number(w.due) - Date.now();
   if(d <= 0) return '今天要複習';
-  if(d < DAY) return Math.max(1, Math.round(d/3600000)) + ' 小時後';
-  return Math.round(d/DAY) + ' 天後';
-}
-const POS = {
-  noun:'名詞', verb:'動詞', adjective:'形容詞', adverb:'副詞', pronoun:'代名詞',
-  preposition:'介系詞', conjunction:'連接詞', interjection:'感嘆詞',
-  determiner:'限定詞', numeral:'數詞', exclamation:'感嘆詞'
-};
-
-/* ========== 查字 ========== */
-async function translate(text){
-  if(!text) return '';
-  const url = 'https://api.mymemory.translated.net/get?q=' +
-              encodeURIComponent(text) + '&langpair=en|zh-TW';
-  const r = await fetch(url);
-  if(!r.ok) throw new Error('translate failed');
-  const j = await r.json();
-  let t = j?.responseData?.translatedText || '';
-  if(/NO QUERY SPECIFIED|MYMEMORY WARNING|INVALID/i.test(t)) t = '';
-  return t.trim();
+  if(d < DAY) return Math.max(1, Math.round(d / 3600000)) + ' 小時後';
+  const n = Math.round(d / DAY);
+  return n < 60 ? n + ' 天後' : Math.round(n / 30) + ' 個月後';
 }
 
-const withTimeout = (p, ms) =>
-  Promise.race([p, new Promise((_,rj)=>setTimeout(()=>rj(new Error('timeout')), ms))]);
-
-const stripTags = h => {
-  const d = document.createElement('div');
-  d.innerHTML = h || '';
-  return (d.textContent || '').replace(/\s+/g,' ').trim();
-};
-
-// 備援一：Free Dictionary API（有音標和例句）
-async function lookupPrimary(term){
-  const r = await withTimeout(
-    fetch('https://api.dictionaryapi.dev/api/v2/entries/en/' + encodeURIComponent(term)), 7000);
-  if(r.status === 404){ const e = new Error('notfound'); e.code = 404; throw e; }
-  if(!r.ok) throw new Error('http ' + r.status);
-  const entry = (await r.json())[0] || {};
-  const phon = entry.phonetic ||
-    (entry.phonetics || []).map(p => p.text).find(Boolean) || '';
-  const senses = [];
-  let example = '';
-  for(const m of (entry.meanings || [])){
-    const d = (m.definitions || [])[0];
-    if(!d) continue;
-    senses.push({
-      pos: POS[m.partOfSpeech] || m.partOfSpeech || '',
-      def: d.definition || '',
-      zh: ''
-    });
-    if(!example){
-      const withEx = (m.definitions || []).find(x => x.example);
-      if(withEx) example = withEx.example;
-    }
-    if(senses.length >= 3) break;
-  }
-  if(!senses.length) throw new Error('empty');
-  return { phon, senses, example, src:'dict' };
+/* ================= 登入 ================= */
+let regMode = false;
+function setRegMode(on){
+  regMode = on;
+  $('#authtitle').textContent = on ? '註冊新帳號' : '登入單字本';
+  $('#authsub').textContent = on ? '名字 2～20 個字，密碼至少 6 個字。' : '手機和電腦登入同一個帳號，單字都會同步。';
+  $('#authbtn').textContent = on ? '註冊' : '登入';
+  $('#pass2wrap').hidden = !on;
+  $('#apass').autocomplete = on ? 'new-password' : 'current-password';
+  $('#authswitch').innerHTML = on
+    ? '已經有帳號？<button type="button" id="toreg">回到登入</button>'
+    : '還沒有帳號？<button type="button" id="toreg">註冊一個</button>';
+  $('#toreg').onclick = () => setRegMode(!regMode);
+  $('#autherr').textContent = '';
 }
+$('#toreg').onclick = () => setRegMode(true);
 
-// 備援二：Wiktionary
-async function lookupWiktionary(term){
-  const r = await withTimeout(
-    fetch('https://en.wiktionary.org/api/rest_v1/page/definition/' +
-          encodeURIComponent(term.toLowerCase())), 9000);
-  if(r.status === 404){ const e = new Error('notfound'); e.code = 404; throw e; }
-  if(!r.ok) throw new Error('http ' + r.status);
-  const groups = (await r.json()).en || [];
-  const senses = [];
-  let example = '';
-  for(const g of groups){
-    const defs = g.definitions || [];
-    const d = defs.find(x => stripTags(x.definition).length > 3);
-    if(!d) continue;
-    senses.push({
-      pos: POS[(g.partOfSpeech || '').toLowerCase()] || g.partOfSpeech || '',
-      def: stripTags(d.definition),
-      zh: ''
-    });
-    if(!example){
-      for(const def of defs){
-        const ex = (def.parsedExamples || [])[0] || (def.examples || [])[0];
-        if(ex){ example = stripTags(typeof ex === 'string' ? ex : ex.example); break; }
-      }
-    }
-    if(senses.length >= 3) break;
-  }
-  if(!senses.length){ const e = new Error('notfound'); e.code = 404; throw e; }
-  return { phon:'', senses, example, src:'dict' };
-}
-
-// 首選：Gemini，一次回繁體意思、所有詞性、詞形變化、例句
-async function lookupGemini(term){
-  const model = (settings.model || DEFAULT_MODEL).trim();
-  const prompt =
-    '你是一本給台灣學生用的英漢辭典。請針對英文單字或片語「' + term + '」輸出辭典資料。' +
-    '所有中文一律使用台灣繁體中文，絕對不可以出現任何簡體字。' +
-    'phon 一定要是 KK 音標（台灣國高中教科書使用的 K.K. 系統），用方括號包起來，例如 [ˋfrædʒəl]；' +
-    '不要給 IPA。如果輸入是片語或慣用語，phon 回空字串。' +
-    'zh 是最常見的中文意思，十五個字以內。' +
-    'senses 每個詞性或用法各一筆，最多四筆；pos 用中文（名詞、動詞、形容詞、副詞、介系詞、片語、慣用語…），' +
-    'zh 是中文解釋，def 是對應的英文解釋。' +
-    'forms 是變化形：動詞給過去式、過去分詞、現在分詞；名詞給複數；形容詞給比較級、最高級；' +
-    '片語就給整個片語的動詞變化；都沒有就回空陣列。label 用中文，value 是變化後的英文。' +
-    'example 是一句自然的英文例句，exampleZh 是它的繁體中文翻譯。';
-  const responseSchema = {
-    type:'object',
-    properties:{
-      phon:{type:'string'},
-      zh:{type:'string'},
-      senses:{type:'array', items:{type:'object', properties:{
-        pos:{type:'string'}, zh:{type:'string'}, def:{type:'string'}
-      }, required:['pos','zh']}},
-      forms:{type:'array', items:{type:'object', properties:{
-        label:{type:'string'}, value:{type:'string'}
-      }, required:['label','value']}},
-      example:{type:'string'},
-      exampleZh:{type:'string'}
-    },
-    required:['zh','senses']
-  };
-  const r = await withTimeout(fetch(
-    'https://generativelanguage.googleapis.com/v1beta/models/' +
-    encodeURIComponent(model) + ':generateContent',
-    {
-      method:'POST',
-      headers:{ 'Content-Type':'application/json', 'x-goog-api-key': settings.key },
-      body: JSON.stringify({
-        contents:[{ parts:[{ text: prompt }] }],
-        generationConfig:{
-          responseMimeType:'application/json', responseSchema, temperature:0.2,
-          thinkingConfig:{ thinkingBudget: 0 }
-        }
-      })
-    }), 20000);
-  if(!r.ok){
-    let msg = 'HTTP ' + r.status;
-    try{ const j = await r.json(); if(j.error && j.error.message) msg = j.error.message; }catch(x){}
-    throw new Error(msg);
-  }
-  const j = await r.json();
-  const cand = (j.candidates || [])[0] || {};
-  const txt = ((cand.content || {}).parts || []).map(p => p.text || '').join('');
-  const d = JSON.parse(txt);
-  const senses = (d.senses || []).slice(0,4).map(s => ({
-    pos: s.pos || '', zh: s.zh || '', def: s.def || ''
-  })).filter(s => s.zh || s.def);
-  if(!senses.length) throw new Error('empty');
-  return {
-    phon: d.phon || '', zh: d.zh || '', senses,
-    forms: (d.forms || []).slice(0,6).filter(f => f && f.label && f.value),
-    example: d.example || '', exampleZh: d.exampleZh || '', src:'gemini'
-  };
-}
-
-async function lookup(term){
-  lastGeminiError = '';
-  if(settings.key){
-    try{ return await lookupGemini(term); }
-    catch(e){ lastGeminiError = e.message; }
-  }
-  // 免費字典只收單字，片語一定查不到，直接講清楚
-  if(/\s/.test(term)){ const e = new Error('phrase'); e.code = 'phrase'; throw e; }
-  try{ return await lookupPrimary(term); }
-  catch(e){ return await lookupWiktionary(term); }
-}
-
-async function fillWord(w){
-  w.status = 'loading'; renderList();
+$('#authform').addEventListener('submit', async e => {
+  e.preventDefault();
+  const name = $('#aname').value.trim(), pw = $('#apass').value;
+  if(regMode && pw !== $('#apass2').value){ $('#autherr').textContent = '兩次密碼不一樣'; return; }
+  const btn = $('#authbtn'); btn.disabled = true;
+  btn.innerHTML = '<span class="spin"></span>' + (regMode ? '註冊中' : '登入中');
+  $('#autherr').textContent = '';
   try{
-    const got = await lookup(w.term);
-    w.phon = got.phon;
-    w.senses = got.senses;
-    w.example = got.example;
-    w.forms = got.forms || [];
-    w.src = got.src || '';
-    w.srcNote = (settings.key && got.src !== 'gemini')
-      ? ('Gemini 沒回應，這筆是備援字典查的：' + (lastGeminiError || '原因不明'))
-      : '';
-    if(got.zh) w.zh = got.zh;
-    if(got.exampleZh) w.exampleZh = got.exampleZh;
-    w.status = 'ok';
-    save(); renderList();
-
-    // 中文：先翻單字，再翻各詞性的解釋，最後翻例句
-    if(!w.zh){
-      try{ w.zh = await zhText(await translate(w.term)); save(); renderList(); }catch(e){}
-    }
-    for(const s of w.senses){
-      if(s.zh) continue;
-      try{ s.zh = await zhText(await translate(s.def)); save(); renderList(); }catch(e){ break; }
-    }
-    if(w.example && !w.exampleZh){
-      try{ w.exampleZh = await zhText(await translate(w.example)); }catch(e){}
-    }
-    save(); renderList();
+    const r = await api(regMode ? 'register' : 'login', { name, password: pw });
+    session = { name: r.name, token: r.token };
+    store.set(SKEY, session);
+    $('#apass').value = ''; $('#apass2').value = '';
+    enterApp();
   }catch(err){
-    w.status = err.code === 'phrase' ? 'phrase' : (err.code === 404 ? 'notfound' : 'error');
-    w.src = '';
-    w.srcNote = (settings.key && lastGeminiError) ? ('Gemini：' + lastGeminiError) : '';
-    save(); renderList();
+    $('#autherr').textContent = err.message;
+  }finally{
+    btn.disabled = false; btn.textContent = regMode ? '註冊' : '登入';
   }
+});
+
+function logout(expired){
+  if(session){ store.del(CKEY(session.name)); store.del(QKEY(session.name)); }
+  session = null; words = []; store.del(SKEY);
+  document.body.classList.remove('authed');
+  $('#appview').hidden = true; $('#authview').hidden = false;
+  closeSheet();
+  setRegMode(false);
+  if(expired) $('#autherr').textContent = '登入已過期，請重新登入';
 }
 
-/* ========== 新增 ========== */
-function addWord(raw){
-  const term = raw.trim().replace(/\s+/g,' ');
-  if(!term) return;
-  const dup = words.find(w => w.term.toLowerCase() === term.toLowerCase());
-  if(dup){
-    toast('這個字已經在單字本裡了');
-    renderList();
-    const el = document.querySelector('[data-id="'+dup.id+'"]');
-    if(el){ el.classList.add('flash'); el.scrollIntoView({block:'center',behavior:'smooth'});
-            setTimeout(()=>el.classList.remove('flash'), 1000); }
-    return;
-  }
-  const w = {
-    id: 'w' + now().toString(36) + Math.random().toString(36).slice(2,6),
-    term, phon:'', zh:'', senses:[], example:'', exampleZh:'', note:'',
-    level:0, due:now(), created:now(), status:'loading'
-  };
-  words.unshift(w); save(); renderList();
-  fillWord(w);
+/* ================= 進入主畫面 ================= */
+async function enterApp(){
+  $('#authview').hidden = true; $('#appview').hidden = false;
+  document.body.classList.add('authed');
+  $('#who').textContent = session.name;
+  words = store.get(CKEY(session.name), []);
+  go('list');
+  await flushQueue();
+  await refresh();
 }
 
-function speak(term){
+async function refresh(){
   try{
-    const u = new SpeechSynthesisUtterance(term);
-    u.lang = 'en-US'; u.rate = .9;
-    speechSynthesis.cancel(); speechSynthesis.speak(u);
-  }catch(e){ toast('這台裝置沒辦法發音'); }
-}
-
-/* ========== 單字卡 ========== */
-function markerStyle(w){
-  // 越熟，螢光筆越淡；熟了就變成薄薄的薄荷色
-  const p = Math.min(w.level, MAX) / MAX;
-  const op = (1 - p * 0.82).toFixed(2);
-  const col = w.level >= MAX ? 'var(--mint)' : 'var(--mark)';
-  return `opacity:${op};background:${col}`;
-}
-function dotsHtml(w){
-  let h = '<div class="dots">';
-  for(let i=0;i<MAX;i++){
-    const cls = w.level >= MAX ? 'dot full' : (i < w.level ? 'dot on' : 'dot');
-    h += `<i class="${cls}"></i>`;
+    const r = await api('list');
+    words = r.words || [];
+    saveCache();
+    renderAll();
+  }catch(e){
+    if(e.code !== 'auth') toast(words.length ? '離線中，顯示上次的資料' : e.message);
   }
-  h += `<span class="due">${esc(dueText(w))}</span></div>`;
-  return h;
-}
-function srcBadge(w){
-  if(!w.src) return '';
-  const g = w.src === 'gemini';
-  return '<span class="src' + (g ? '' : ' alt') + '">' + (g ? 'Gemini' : '備援字典') + '</span>';
-}
-function formsHtml(w){
-  if(!w.forms || !w.forms.length) return '';
-  return '<div class="forms">' + w.forms.map(f =>
-    '<span>' + esc(f.label) + '<b>' + esc(f.value) + '</b></span>').join('') + '</div>';
-}
-function sensesHtml(w){
-  if(!w.senses || !w.senses.length) return '';
-  return w.senses.map(s => `
-    <div class="sense">
-      ${s.pos ? `<span class="pos">${esc(s.pos)}</span>` : ''}
-      <span class="zh">${esc(s.zh || '（點編輯補中文）')}</span>
-      ${s.def ? `<div class="def">${esc(s.def)}</div>` : ''}
-    </div>`).join('');
-}
-function cardHtml(w){
-  const editing = editId === w.id;
-  let body = '';
-  if(w.status === 'loading'){
-    body = `<div class="status">查詢中…</div>`;
-  }else if(w.status === 'notfound'){
-    body = `<div class="status err">字典查不到這個字，確認一下拼字，或自己填。
-              <button class="retry" data-act="retry" data-id="${w.id}">重查</button></div>`;
-  }else if(w.status === 'phrase'){
-    body = `<div class="status err">片語要設 Gemini 金鑰才查得到，免費字典只收單字。到「更多」設定金鑰，或點「編輯」自己填。</div>`;
-  }else if(w.status === 'error'){
-    body = `<div class="status err">連不上字典，可能是沒網路。
-              <button class="retry" data-act="retry" data-id="${w.id}">重試</button></div>`;
-  }else{
-    body = sensesHtml(w);
-  }
-
-  const ex = w.example ? `
-    <div class="ex">
-      <q>${esc(w.example)}</q>
-      ${w.exampleZh ? `<div class="exzh">${esc(w.exampleZh)}</div>` : ''}
-    </div>` : '';
-
-  const note = w.note ? `<div class="note">筆記：${esc(w.note)}</div>` : '';
-
-  const editor = editing ? `
-    <div class="editor">
-      <div><label for="e-zh-${w.id}">中文意思</label>
-        <input id="e-zh-${w.id}" data-e="zh" value="${esc(w.zh)}"></div>
-      <div><label for="e-ex-${w.id}">例句</label>
-        <textarea id="e-ex-${w.id}" data-e="example" rows="2">${esc(w.example)}</textarea></div>
-      <div><label for="e-exzh-${w.id}">例句中文</label>
-        <textarea id="e-exzh-${w.id}" data-e="exampleZh" rows="2">${esc(w.exampleZh)}</textarea></div>
-      <div><label for="e-note-${w.id}">自己的筆記</label>
-        <textarea id="e-note-${w.id}" data-e="note" rows="2" placeholder="哪裡看到的、怎麼記、跟哪個字容易搞混…">${esc(w.note)}</textarea></div>
-      <div class="row">
-        <button data-act="canceledit">取消</button>
-        <button class="save" data-act="saveedit" data-id="${w.id}">儲存</button>
-      </div>
-    </div>` : '';
-
-  return `
-  <article class="card" data-id="${w.id}">
-    <div class="termline">
-      <div>
-        <span class="termwrap"><i class="marker" style="${markerStyle(w)}"></i><span class="term">${esc(w.term)}</span></span>
-        ${(w.phon || w.zh) ? `<div class="phon">${[w.phon, w.zh].filter(Boolean).map(esc).join(' · ')}</div>` : ''}
-        ${srcBadge(w)}
-      </div>
-      <button class="speak" data-act="speak" data-id="${w.id}" aria-label="唸出 ${esc(w.term)}">♪</button>
-    </div>
-    ${body}
-    ${w.srcNote ? `<div class="srcnote">${esc(w.srcNote)}</div>` : ''}
-    ${formsHtml(w)}
-    ${ex}
-    ${note}
-    ${editor}
-    <div class="meta">
-      ${dotsHtml(w)}
-      <div class="acts">
-        <button data-act="edit" data-id="${w.id}">編輯</button>
-        <button class="del" data-act="del" data-id="${w.id}">刪除</button>
-      </div>
-    </div>
-  </article>`;
 }
 
-/* ========== 清單 ========== */
-let filter = 'all', editId = null;
-function filtered(){
-  if(filter === 'due')  return words.filter(isDue).filter(w => w.level < MAX);
-  if(filter === 'new')  return words.filter(w => w.level < 3);
-  if(filter === 'done') return words.filter(w => w.level >= MAX);
-  return words;
-}
-function renderList(){
-  const list = filtered();
-  const box = $('#listbody');
-  if(!words.length){
-    box.innerHTML = `<div class="empty">
-      <div class="big">還沒有單字</div>
-      <p>看到不會的字或片語就丟進上面那格。<br>音標、詞性、意思、例句我會自動補上。</p></div>`;
-  }else if(!list.length){
-    box.innerHTML = `<div class="empty"><p>這個分類目前是空的。</p></div>`;
-  }else{
-    box.innerHTML = list.map(cardHtml).join('');
-  }
-  renderCounts();
-}
-function renderCounts(){
-  const due = words.filter(w => isDue(w) && w.level < MAX).length;
-  $('#headcount').textContent = words.length
-    ? `${words.length} 個字${due ? ` · ${due} 個待複習` : ''}` : '';
-  const b = $('#navbadge');
-  b.hidden = !due; b.textContent = due > 99 ? '99+' : due;
-}
-
-/* ========== 複習 ========== */
-let queue = [], qi = 0, revealed = false, extra = false;
-function buildQueue(){
-  queue = words.filter(w => isDue(w) && w.level < MAX)
-               .sort((a,b) => (a.due||0) - (b.due||0));
-  qi = 0; revealed = false; extra = false;
-}
-function renderReview(){
-  const v = $('#v-review');
-  if(qi >= queue.length){
-    const total = words.length;
-    v.innerHTML = total ? `<div class="empty">
-        <div class="big">${extra ? '練完了' : '今天複習完了'}</div>
-        <p>下一批單字到時間就會出現在這裡。</p>
-        <div class="btns" style="justify-content:center;margin-top:18px">
-          <button id="practice">隨機再練 10 個</button></div>
-      </div>` : `<div class="empty">
-        <div class="big">沒有東西可以複習</div>
-        <p>先去單字本加幾個字。</p></div>`;
-    const p = $('#practice');
-    if(p) p.onclick = () => {
-      queue = [...words].sort(()=>Math.random()-.5).slice(0,10);
-      qi = 0; revealed = false; extra = true; renderReview();
-    };
-    return;
-  }
-  const w = queue[qi];
-  const pct = Math.round(qi / queue.length * 100);
-  v.innerHTML = `
-    <div class="rev-top"><span>${qi+1} / ${queue.length}</span>
-      <span class="rev-bar"><i style="width:${pct}%"></i></span></div>
-    <div class="rcard">
-      <span class="termwrap"><i class="marker" id="revmark" style="${markerStyle(w)}"></i><span class="term">${esc(w.term)}</span></span>
-      ${revealed && w.phon ? `<div class="phon">${esc(w.phon)}</div>` : ''}
-      ${revealed ? `<div class="answer">
-          ${w.zh ? `<div class="zh" style="font-size:18px;margin-bottom:6px">${esc(w.zh)}</div>` : ''}
-          ${sensesHtml(w)}
-          ${formsHtml(w)}
-          ${w.example ? `<div class="ex"><q>${esc(w.example)}</q>
-            ${w.exampleZh?`<div class="exzh">${esc(w.exampleZh)}</div>`:''}</div>` : ''}
-          ${w.note ? `<div class="note">筆記：${esc(w.note)}</div>` : ''}
-        </div>` : `<button class="reveal" id="revealbtn">看答案</button>`}
-    </div>
-    ${revealed ? `<div class="grade">
-      <button data-g="0">想不起來</button>
-      <button data-g="1">有點模糊</button>
-      <button class="g2" data-g="2">記得</button>
-    </div>` : `<div class="grade"><button style="grid-column:1/-1" data-act="speakrev">唸一次給我聽</button></div>`}
-  `;
-  const rb = $('#revealbtn');
-  if(rb) rb.onclick = () => { revealed = true; renderReview(); };
-  v.querySelectorAll('[data-g]').forEach(b => b.onclick = () => grade(+b.dataset.g));
-  const sp = v.querySelector('[data-act="speakrev"]');
-  if(sp) sp.onclick = () => speak(w.term);
-}
-function grade(g){
-  const w = queue[qi];
-  if(g === 2){
-    w.level = Math.min(MAX, w.level + 1);
-    w.due = now() + STEPS[Math.min(w.level, STEPS.length) - 1] * DAY;
-  }else if(g === 1){
-    w.due = now() + DAY;
-  }else{
-    w.level = Math.max(0, w.level - 1);
-    w.due = now() + 10 * 60000;
-  }
-  save();
-  const m = $('#revmark');
-  const go = () => { qi++; revealed = false; renderReview(); renderCounts(); renderList(); };
-  if(g === 2 && m && !matchMedia('(prefers-reduced-motion: reduce)').matches){
-    m.classList.add('wipe'); setTimeout(go, 340);
-  }else go();
-}
-
-/* ========== 更多 ========== */
-function renderMore(){
-  const due  = words.filter(w => isDue(w) && w.level < MAX).length;
-  const done = words.filter(w => w.level >= MAX).length;
-  $('#stats').innerHTML = `
-    <div class="stat"><b>${words.length}</b><span>收錄單字</span></div>
-    <div class="stat"><b>${due}</b><span>待複習</span></div>
-    <div class="stat"><b>${done}</b><span>已經熟了</span></div>`;
-}
-
-/* ========== 分頁 ========== */
-function go(tab){
-  ['list','review','more'].forEach(t => $('#v-'+t).hidden = (t !== tab));
+/* ================= 分頁 ================= */
+function go(t){
+  tab = t;
+  ['list', 'review', 'me'].forEach(x => $('#v-' + x).hidden = x !== t);
   document.querySelectorAll('nav button').forEach(b =>
-    b.dataset.tab === tab ? b.setAttribute('aria-current','page') : b.removeAttribute('aria-current'));
-  if(tab === 'review'){ buildQueue(); renderReview(); }
-  if(tab === 'more'){ renderMore(); syncKeyUI(); }
-  if(tab === 'list') renderList();
-  window.scrollTo(0,0);
+    b.dataset.tab === t ? b.setAttribute('aria-current', 'page') : b.removeAttribute('aria-current'));
+  if(t === 'review') startReview();
+  renderAll();
+  window.scrollTo(0, 0);
 }
 document.querySelectorAll('nav button').forEach(b => b.onclick = () => go(b.dataset.tab));
 
-/* ========== 事件 ========== */
-$('#addbtn').onclick = () => { addWord($('#newword').value); $('#newword').value=''; };
-$('#newword').addEventListener('keydown', e => {
-  if(!$('#sugs').hidden && sugItems.length){
-    if(e.key === 'ArrowDown'){
-      e.preventDefault(); sugIdx = (sugIdx + 1) % sugItems.length; renderSugs(); return;
-    }
-    if(e.key === 'ArrowUp'){
-      e.preventDefault(); sugIdx = (sugIdx - 1 + sugItems.length) % sugItems.length; renderSugs(); return;
-    }
-    if(e.key === 'Escape'){ hideSugs(); return; }
-    if(e.key === 'Enter' && sugIdx >= 0){
-      e.preventDefault(); $('#newword').value = sugItems[sugIdx];
-      hideSugs(); $('#addbtn').click(); return;
-    }
+function renderAll(){
+  renderBadge();
+  if(tab === 'list') renderList();
+  if(tab === 'me') renderMe();
+}
+function renderBadge(){
+  const n = dueList().length, b = $('#navbadge');
+  b.hidden = !n; b.textContent = n > 99 ? '99+' : n;
+}
+
+/* ================= 單字本 ================= */
+function boxCounts(){
+  const c = Array(MASTERED + 1).fill(0);
+  words.forEach(w => c[Math.min(MASTERED, w.box || 1)]++);
+  return c;
+}
+function renderList(){
+  const c = boxCounts(), max = Math.max(1, ...c.slice(1));
+  let h = '';
+  for(let b = 1; b <= MASTERED; b++){
+    const done = b === MASTERED;
+    h += `<button class="bx${done ? ' done' : ''}${c[b] ? '' : ' zero'}" data-b="${b}" aria-pressed="${boxFilter === b}"
+            aria-label="${boxName(b)}，${c[b]} 個字">
+            <i style="height:${Math.round(c[b] / max * 100)}%"></i>
+            <b>${c[b]}</b><span>${done ? '畢業' : BOXLABEL[b - 1]}</span></button>`;
   }
-  if(e.key === 'Enter'){ e.preventDefault(); hideSugs(); $('#addbtn').click(); }
-});
-document.querySelectorAll('.filters button').forEach(b => b.onclick = () => {
-  filter = b.dataset.f;
-  document.querySelectorAll('.filters button').forEach(x =>
-    x.setAttribute('aria-pressed', String(x === b)));
-  renderList();
-});
+  $('#boxes').innerHTML = h;
+  $('#boxes').querySelectorAll('.bx').forEach(el => el.onclick = () => {
+    const b = +el.dataset.b; boxFilter = boxFilter === b ? 0 : b; renderList();
+  });
+
+  const list = (boxFilter ? words.filter(w => Math.min(MASTERED, w.box) === boxFilter) : words.slice())
+    .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+  $('#listtitle').textContent = boxFilter
+    ? `${boxName(boxFilter)}${boxFilter < MASTERED ? '（每 ' + BOXLABEL[boxFilter - 1] + '）' : ''}・${list.length} 個字`
+    : `全部 ${words.length} 個字`;
+  $('#clearfilter').hidden = !boxFilter;
+
+  const body = $('#listbody');
+  if(!words.length){
+    body.innerHTML = `<div class="empty"><div class="big">還沒有單字</div>
+      <p>看到不會的字或片語就打進上面那格。<br>KK 音標、詞性、意思、例句會自動補上。</p></div>`;
+    return;
+  }
+  if(!list.length){ body.innerHTML = `<div class="empty"><p>這一格目前是空的。</p></div>`; return; }
+  body.innerHTML = list.map(w => {
+    const due = isDue(w), done = w.box >= MASTERED;
+    return `<button class="row" data-id="${esc(w.id)}">
+      <span class="t"><span class="term">${esc(w.term)}</span><span class="zh">${esc(w.zh)}</span></span>
+      <span class="chip${due ? ' due' : ''}${done ? ' done' : ''}">${due ? '待複習' : (done ? '畢業' : '第' + w.box + '格')}</span>
+    </button>`;
+  }).join('');
+}
+$('#clearfilter').onclick = () => { boxFilter = 0; renderList(); };
 $('#listbody').addEventListener('click', e => {
-  const btn = e.target.closest('[data-act]'); if(!btn) return;
-  const id = btn.dataset.id, w = words.find(x => x.id === id);
-  switch(btn.dataset.act){
-    case 'speak': speak(w.term); break;
-    case 'retry': fillWord(w); break;
-    case 'edit': editId = (editId === id ? null : id); renderList(); break;
-    case 'canceledit': editId = null; renderList(); break;
-    case 'del':
-      if(confirm(`把「${w.term}」從單字本刪掉？`)){
-        words = words.filter(x => x.id !== id); save(); renderList();
-      }
-      break;
-    case 'saveedit': {
-      const card = btn.closest('.card');
-      card.querySelectorAll('[data-e]').forEach(f => { w[f.dataset.e] = f.value.trim(); });
-      if(w.status !== 'ok' && (w.zh || w.example)) w.status = 'ok';
-      editId = null; save(); renderList(); toast('改好了');
-      break;
-    }
-  }
+  const r = e.target.closest('.row'); if(r) openWord(r.dataset.id);
 });
 
-/* 匯出 / 匯入 */
-$('#exportbtn').onclick = () => {
-  const blob = new Blob([JSON.stringify({app:'vocab', v:1, at:new Date().toISOString(), words}, null, 2)],
-                        {type:'application/json'});
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = `單字本備份-${new Date().toISOString().slice(0,10)}.json`;
-  a.click(); setTimeout(()=>URL.revokeObjectURL(a.href), 1000);
-};
-$('#importbtn').onclick = () => $('#importfile').click();
-$('#importfile').onchange = async e => {
-  const f = e.target.files[0]; if(!f) return;
-  try{
-    const j = JSON.parse(await f.text());
-    const incoming = Array.isArray(j) ? j : j.words;
-    if(!Array.isArray(incoming)) throw new Error('bad');
-    let added = 0;
-    for(const w of incoming){
-      if(!w || !w.term) continue;
-      if(words.some(x => x.term.toLowerCase() === String(w.term).toLowerCase())) continue;
-      words.push(Object.assign({
-        id:'w'+Math.random().toString(36).slice(2,10), phon:'', zh:'', senses:[],
-        example:'', exampleZh:'', note:'', level:0, due:now(), created:now(), status:'ok'
-      }, w));
-      added++;
-    }
-    save(); renderList(); renderMore();
-    toast(added ? `匯入 ${added} 個新單字` : '沒有新的單字可以加');
-  }catch(err){ toast('這個檔案讀不出來'); }
-  e.target.value = '';
-};
-$('#clearbtn').onclick = () => {
-  if(!words.length) return toast('本來就是空的');
-  if(confirm(`刪掉全部 ${words.length} 個單字？這個動作救不回來。`)){
-    words = []; save(); renderList(); renderMore(); toast('清空了');
-  }
-};
+/* ---------- 加字 ---------- */
+let adding = 0;
+async function addWord(raw){
+  const term = raw.trim().replace(/\s+/g, ' ');
+  if(!term) return;
+  const dup = words.find(w => w.term.toLowerCase() === term.toLowerCase());
+  if(dup){ toast('這個字已經在單字本裡了'); openWord(dup.id); return; }
 
-/* ========== 輸入建議 ========== */
+  adding++; showAdding(term);
+  try{
+    const r = await api('add', { term });
+    if(!words.some(w => w.id === r.word.id)) words.unshift(r.word);
+    saveCache(); renderAll();
+    if(r.duplicate) toast('這個字已經在單字本裡了');
+    else toast('加入「' + r.word.term + '」：' + (r.word.zh || ''));
+  }catch(e){
+    toast(e.code === 'notfound' ? e.message : '沒加成功：' + e.message, 3600);
+    if(e.code !== 'notfound') $('#newword').value = term;
+  }finally{
+    adding--; showAdding();
+  }
+}
+function showAdding(term){
+  const el = $('#adding');
+  if(adding && term){ el.hidden = false; el.innerHTML = `<span class="spin"></span>正在查「${esc(term)}」…`; }
+  else if(!adding){ el.hidden = true; }
+}
+$('#addbtn').onclick = () => { const v = $('#newword').value; $('#newword').value = ''; hideSugs(); addWord(v); };
+
+/* ---------- 輸入建議 ---------- */
 let sugTimer = null, sugItems = [], sugIdx = -1;
 function hideSugs(){ $('#sugs').hidden = true; sugItems = []; sugIdx = -1; }
 function renderSugs(){
-  const box = $('#sugs');
   if(!sugItems.length){ hideSugs(); return; }
-  box.innerHTML = sugItems.map((w,i) =>
-    '<button type="button" data-i="' + i + '"' + (i === sugIdx ? ' class="sel"' : '') + '>' +
-    esc(w) + '</button>').join('');
-  box.hidden = false;
+  $('#sugs').innerHTML = sugItems.map((w, i) =>
+    `<button type="button" data-i="${i}"${i === sugIdx ? ' class="sel"' : ''}>${esc(w)}</button>`).join('');
+  $('#sugs').hidden = false;
 }
 async function fetchSugs(prefix){
   try{
-    const r = await withTimeout(
-      fetch('https://api.datamuse.com/sug?s=' + encodeURIComponent(prefix) + '&max=6'), 4000);
+    const r = await withTimeout(fetch('https://api.datamuse.com/sug?s=' + encodeURIComponent(prefix) + '&max=6'), 4000);
     if(!r.ok) return;
     const j = await r.json();
     if($('#newword').value.trim().toLowerCase() !== prefix) return;
-    sugItems = j.map(x => x.word).filter(x => x.toLowerCase() !== prefix).slice(0,6);
+    sugItems = j.map(x => x.word).filter(x => x.toLowerCase() !== prefix).slice(0, 6);
     sugIdx = -1; renderSugs();
   }catch(e){}
 }
@@ -991,75 +535,254 @@ $('#newword').addEventListener('input', () => {
   if(v.length < 2){ hideSugs(); return; }
   sugTimer = setTimeout(() => fetchSugs(v), 220);
 });
+$('#newword').addEventListener('keydown', e => {
+  if(!$('#sugs').hidden && sugItems.length){
+    if(e.key === 'ArrowDown'){ e.preventDefault(); sugIdx = (sugIdx + 1) % sugItems.length; renderSugs(); return; }
+    if(e.key === 'ArrowUp'){ e.preventDefault(); sugIdx = (sugIdx - 1 + sugItems.length) % sugItems.length; renderSugs(); return; }
+    if(e.key === 'Escape'){ hideSugs(); return; }
+    if(e.key === 'Enter' && sugIdx >= 0){ e.preventDefault(); $('#newword').value = sugItems[sugIdx]; $('#addbtn').click(); return; }
+  }
+  if(e.key === 'Enter'){ e.preventDefault(); $('#addbtn').click(); }
+});
 $('#newword').addEventListener('blur', () => setTimeout(hideSugs, 200));
 $('#sugs').addEventListener('mousedown', e => {
   const b = e.target.closest('button'); if(!b) return;
-  e.preventDefault();
-  $('#newword').value = sugItems[+b.dataset.i];
-  hideSugs(); $('#addbtn').click();
+  e.preventDefault(); $('#newword').value = sugItems[+b.dataset.i]; $('#addbtn').click();
 });
 
-/* ========== Gemini 金鑰 ========== */
-function syncKeyUI(){
-  $('#gemkey').value = settings.key || '';
-  $('#gemmodel').value = settings.model || DEFAULT_MODEL;
-  renderKeyState();
-}
-function renderKeyState(msg, cls){
-  const el = $('#keystate');
-  el.className = 'keystate' + (cls ? ' ' + cls : '');
-  el.textContent = msg || (settings.key
-    ? '目前用 Gemini 查詢。'
-    : '還沒設金鑰，目前用免費字典查詢，會慢一些。');
-}
-$('#savekey').onclick = () => {
-  settings.key = $('#gemkey').value.trim();
-  settings.model = $('#gemmodel').value.trim() || DEFAULT_MODEL;
-  saveSettings();
-  renderKeyState(settings.key ? '金鑰已存在這台裝置上。' : '金鑰已清空。', settings.key ? 'ok' : '');
-};
-$('#clearkey').onclick = () => {
-  settings.key = ''; $('#gemkey').value = ''; saveSettings();
-  renderKeyState('金鑰已清除，改用免費字典。');
-};
-$('#testkey').onclick = async () => {
-  const k = $('#gemkey').value.trim() || settings.key;
-  if(!k){ renderKeyState('先貼上金鑰再測試。', 'bad'); return; }
-  const prevKey = settings.key, prevModel = settings.model;
-  settings.key = k;
-  settings.model = $('#gemmodel').value.trim() || DEFAULT_MODEL;
-  renderKeyState('測試中…');
-  try{
-    const d = await lookupGemini('resilient');
-    saveSettings();
-    renderKeyState('可以用。resilient 查回來是「' + (d.zh || '？') + '」。', 'ok');
-  }catch(e){
-    settings.key = prevKey; settings.model = prevModel;
-    renderKeyState('失敗：' + e.message, 'bad');
+/* ================= 字卡內容 ================= */
+function detailHtml(w){
+  let h = '';
+  if(w.phon) h += `<div class="phon">${esc(w.phon)}</div>`;
+  if(w.zh) h += `<div class="mainzh">${esc(w.zh)}</div>`;
+  (w.senses || []).forEach(s => {
+    h += `<div class="sense">${s.pos ? `<span class="pos">${esc(s.pos)}</span>` : ''}${esc(s.zh)}
+          ${s.def ? `<div class="def">${esc(s.def)}</div>` : ''}</div>`;
+  });
+  if(w.forms && w.forms.length){
+    h += '<div class="forms">' + w.forms.map(f => `<span>${esc(f.label)}<b>${esc(f.value)}</b></span>`).join('') + '</div>';
   }
-};
-
-/* 安裝提示（Android / 桌面 Chrome） */
-let deferred = null;
-window.addEventListener('beforeinstallprompt', e => {
-  e.preventDefault(); deferred = e; $('#installwrap').hidden = false;
-});
-$('#installbtn').onclick = async () => {
-  if(!deferred) return;
-  deferred.prompt(); await deferred.userChoice;
-  deferred = null; $('#installwrap').hidden = true;
-};
-
-/* ========== 啟動 ========== */
-if(memOnly){
-  $('#storagewarn').innerHTML =
-    '<div class="warnbar">這個瀏覽器不讓網頁存資料（可能是無痕模式），單字關掉就會不見。</div>';
+  if(w.example) h += `<div class="ex"><q>${esc(w.example)}</q>${w.exampleZh ? `<div class="exzh">${esc(w.exampleZh)}</div>` : ''}</div>`;
+  if(w.note) h += `<div class="note">筆記：${esc(w.note)}</div>`;
+  return h;
 }
-renderList();
+
+function speak(term){
+  try{
+    const u = new SpeechSynthesisUtterance(term); u.lang = 'en-US'; u.rate = .9;
+    speechSynthesis.cancel(); speechSynthesis.speak(u);
+  }catch(e){ toast('這台裝置沒辦法發音'); }
+}
+
+/* ---------- 詳細頁 ---------- */
+let sheetWord = null, editing = false;
+function openWord(id){
+  sheetWord = words.find(w => w.id === id); if(!sheetWord) return;
+  editing = false; renderSheet(); $('#sheet').hidden = false;
+}
+function closeSheet(){ $('#sheet').hidden = true; sheetWord = null; }
+$('#sheet').addEventListener('click', e => { if(e.target.id === 'sheet') closeSheet(); });
+document.addEventListener('keydown', e => { if(e.key === 'Escape' && !$('#sheet').hidden) closeSheet(); });
+
+function renderSheet(){
+  const w = sheetWord;
+  const ed = editing ? `
+    <form class="editor" id="editform">
+      <div><label for="e-zh">中文意思</label><input id="e-zh" data-k="zh" value="${esc(w.zh)}"></div>
+      <div><label for="e-ex">例句</label><textarea id="e-ex" data-k="example" rows="2">${esc(w.example)}</textarea></div>
+      <div><label for="e-exzh">例句中文</label><textarea id="e-exzh" data-k="exampleZh" rows="2">${esc(w.exampleZh)}</textarea></div>
+      <div><label for="e-note">自己的筆記</label><textarea id="e-note" data-k="note" rows="2" placeholder="哪裡看到的、怎麼記、跟哪個字容易搞混…">${esc(w.note)}</textarea></div>
+      <div class="acts"><button class="btn primary" type="submit">儲存</button><button class="btn" type="button" id="canceledit">取消</button></div>
+    </form>` : '';
+  $('#sheetin').innerHTML = `
+    <div class="sheettop">
+      <span class="termwrap"><i class="marker"></i><span class="term">${esc(w.term)}</span></span>
+      <span style="display:flex;gap:8px">
+        <button class="iconbtn" id="sp" aria-label="唸出 ${esc(w.term)}">♪</button>
+        <button class="iconbtn" id="cl" aria-label="關閉">✕</button>
+      </span>
+    </div>
+    ${detailHtml(w)}
+    <div class="meta">${boxName(w.box)}・${dueText(w)}・答對 ${w.right} 次、答錯 ${w.wrong} 次</div>
+    ${ed}
+    ${editing ? '' : `<div class="acts">
+      <button class="btn" id="editbtn">編輯</button>
+      <button class="btn" id="refetchbtn">重新查詢</button>
+      <button class="btn del" id="delbtn">刪除</button></div>`}`;
+  $('#sp').onclick = () => speak(w.term);
+  $('#cl').onclick = closeSheet;
+  if(editing){
+    $('#canceledit').onclick = () => { editing = false; renderSheet(); };
+    $('#editform').onsubmit = async e => {
+      e.preventDefault();
+      const fields = {};
+      $('#editform').querySelectorAll('[data-k]').forEach(f => fields[f.dataset.k] = f.value.trim());
+      try{ const r = await api('update', { id: w.id, fields }); replaceWord(r.word); editing = false; renderSheet(); toast('改好了'); }
+      catch(err){ toast(err.message); }
+    };
+  }else{
+    $('#editbtn').onclick = () => { editing = true; renderSheet(); };
+    $('#refetchbtn').onclick = async () => {
+      const b = $('#refetchbtn'); b.disabled = true; b.innerHTML = '<span class="spin"></span>查詢中';
+      try{ const r = await api('refetch', { id: w.id }); replaceWord(r.word); renderSheet(); toast('更新了'); }
+      catch(err){ toast(err.message); b.disabled = false; b.textContent = '重新查詢'; }
+    };
+    $('#delbtn').onclick = async () => {
+      if(!confirm('把「' + w.term + '」從單字本刪掉？')) return;
+      try{ await api('delete', { id: w.id }); words = words.filter(x => x.id !== w.id); saveCache(); closeSheet(); renderAll(); toast('刪掉了'); }
+      catch(err){ toast(err.message); }
+    };
+  }
+}
+function replaceWord(nw){
+  const i = words.findIndex(x => x.id === nw.id);
+  if(i >= 0) words[i] = nw; else words.unshift(nw);
+  if(sheetWord && sheetWord.id === nw.id) sheetWord = nw;
+  saveCache(); renderAll();
+}
+
+/* ================= 複習：翻面字卡 ================= */
+let queue = [], qi = 0, flipped = false, sessionRight = 0, sessionWrong = 0;
+function startReview(){
+  queue = dueList(); qi = 0; flipped = false; sessionRight = 0; sessionWrong = 0;
+  renderReview();
+}
+function renderReview(){
+  const v = $('#v-review');
+  if(!words.length){
+    v.innerHTML = `<div class="empty"><div class="big">還沒有單字</div><p>先到單字本加幾個字。</p></div>`; return;
+  }
+  if(qi >= queue.length){
+    const next = words.filter(w => w.box < MASTERED && !isDue(w)).sort((a, b) => a.due - b.due)[0];
+    v.innerHTML = `<div class="empty">
+      <div class="big">${queue.length ? '今天複習完了' : '現在沒有要複習的字'}</div>
+      <p>${queue.length ? `答對 ${sessionRight} 個、答錯 ${sessionWrong} 個。<br>` : ''}
+      ${next ? '下一個要複習的是「' + esc(next.term) + '」，' + dueText(next) + '。' : '所有字都畢業了。'}</p></div>`;
+    return;
+  }
+  const w = queue[qi];
+  const pct = Math.round(qi / queue.length * 100);
+  const upGap = w.box >= BOXES.length ? '畢業' : BOXLABEL[w.box] + '後';
+  const downBox = Math.max(1, Math.min(w.box, BOXES.length) - 1);
+  v.innerHTML = `
+    <div class="rev-top"><span>${qi + 1} / ${queue.length}</span><span class="rev-bar"><i style="width:${pct}%"></i></span></div>
+    <div class="flip${flipped ? ' on' : ''}" id="flip" role="button" tabindex="0" aria-label="${flipped ? '字卡背面' : '點一下翻面'}">
+      <div class="flipin">
+        <div class="face front">
+          <span class="boxtag">${boxName(w.box)}</span>
+          <span class="termwrap"><i class="marker"></i><span class="term">${esc(w.term)}</span></span>
+          <div class="speakrow"><button class="iconbtn" id="rsp" aria-label="唸出來">♪</button></div>
+          <span class="tap">點一下翻面</span>
+        </div>
+        <div class="face back">
+          <span class="termwrap"><i class="marker"></i><span class="term">${esc(w.term)}</span></span>
+          ${detailHtml(w)}
+        </div>
+      </div>
+    </div>
+    ${flipped ? `<div class="grade">
+      <button class="no" id="gno">答錯<small>回到第 ${downBox} 格・${BOXLABEL[downBox - 1]}後</small></button>
+      <button class="yes" id="gyes">答對<small>${w.box >= BOXES.length ? '直接畢業' : '升到第 ' + (w.box + 1) + ' 格・' + upGap}</small></button>
+    </div>` : `<div class="grade"><button style="grid-column:1/-1" id="doflip">翻面看答案</button></div>`}`;
+
+  const flip = () => { if(!flipped){ flipped = true; renderReview(); } };
+  $('#flip').onclick = e => { if(e.target.closest('#rsp')) return; flip(); };
+  $('#flip').onkeydown = e => { if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); flip(); } };
+  $('#rsp').onclick = e => { e.stopPropagation(); speak(w.term); };
+  if(flipped){ $('#gno').onclick = () => grade(false); $('#gyes').onclick = () => grade(true); }
+  else $('#doflip').onclick = flip;
+}
+
+function applyGrade(w, correct){
+  const from = w.box;
+  if(correct){ w.box = Math.min(MASTERED, from + 1); w.right++; }
+  else { w.box = Math.max(1, Math.min(from, BOXES.length) - 1); w.wrong++; }
+  w.due = w.box >= MASTERED ? '' : Date.now() + BOXES[w.box - 1] * DAY;
+  return w;
+}
+
+function grade(correct){
+  const w = queue[qi];
+  applyGrade(w, correct);
+  correct ? sessionRight++ : sessionWrong++;
+  saveCache(); renderBadge();
+  sendReview(w.id, correct);
+  toast(correct ? (w.box >= MASTERED ? '畢業了！' : '→ ' + boxName(w.box) + '，' + BOXLABEL[w.box - 1] + '後再見')
+                : '→ ' + boxName(w.box) + '，' + BOXLABEL[w.box - 1] + '後再問', 1600);
+  qi++; flipped = false; renderReview();
+}
+
+/* 複習結果先記在本機佇列，網路斷了也不會掉 */
+function sendReview(id, correct){
+  const q = store.get(QKEY(session.name), []);
+  q.push({ id, correct, at: Date.now() });
+  store.set(QKEY(session.name), q);
+  flushQueue();
+}
+let flushing = false;
+async function flushQueue(){
+  if(!session || flushing) return;
+  flushing = true;
+  try{
+    let q = store.get(QKEY(session.name), []);
+    while(q.length){
+      const item = q[0];
+      try{
+        const r = await api('review', { id: item.id, correct: item.correct });
+        const i = words.findIndex(x => x.id === r.word.id);
+        if(i >= 0 && store.get(QKEY(session.name), []).length <= 1) words[i] = r.word;
+      }catch(e){
+        if(e.code === 'net') break;          // 網路問題：留著下次再送
+      }
+      q = store.get(QKEY(session.name), []); q.shift(); store.set(QKEY(session.name), q);
+    }
+    saveCache();
+  }finally{ flushing = false; }
+}
+window.addEventListener('online', flushQueue);
+
+/* ================= 我的 ================= */
+function renderMe(){
+  const c = boxCounts(), due = dueList().length;
+  $('#stats').innerHTML =
+    `<div class="stat"><b>${words.length}</b><span>收錄單字</span></div>` +
+    `<div class="stat"><b>${due}</b><span>今天待複習</span></div>` +
+    `<div class="stat"><b>${c[MASTERED]}</b><span>已畢業</span></div>`;
+  let t = '';
+  for(let b = 1; b <= MASTERED; b++){
+    t += `<tr><td>${boxName(b)}${b < MASTERED ? '（每 ' + BOXLABEL[b - 1] + '）' : ''}</td><td>${c[b]}</td></tr>`;
+  }
+  $('#boxtable').innerHTML = t;
+  $('#meline').textContent = '目前登入：' + session.name;
+}
+$('#logoutbtn').onclick = () => { if(confirm('確定要登出？')) logout(); };
+$('#pwbtn').onclick = () => { $('#pwform').hidden = !$('#pwform').hidden; };
+$('#pwform').onsubmit = async e => {
+  e.preventDefault();
+  try{
+    const r = await api('password', { oldPassword: $('#oldpw').value, newPassword: $('#newpw').value });
+    session.token = r.token; store.set(SKEY, session);
+    $('#oldpw').value = ''; $('#newpw').value = ''; $('#pwform').hidden = true;
+    toast('密碼改好了');
+  }catch(err){ toast(err.message); }
+};
+
+/* 安裝提示 */
+let deferred = null;
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); deferred = e; $('#installbtn').hidden = false; });
+$('#installbtn').onclick = async () => { if(!deferred) return; deferred.prompt(); await deferred.userChoice; deferred = null; $('#installbtn').hidden = true; };
+
+/* 回到前景時重新同步（例如另一台裝置剛加了字） */
+document.addEventListener('visibilitychange', () => {
+  if(document.visibilityState === 'visible' && session){ flushQueue().then(refresh); }
+});
+
+/* ================= 啟動 ================= */
+if(session && session.token) enterApp();
+else { $('#authview').hidden = false; }
 
 if('serviceWorker' in navigator){
-  window.addEventListener('load', () =>
-    navigator.serviceWorker.register('./sw.js').catch(()=>{}));
+  window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => {}));
 }
 })();
 </script>
