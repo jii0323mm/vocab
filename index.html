@@ -254,7 +254,7 @@ nav .badge{position:absolute;top:6px;left:calc(50% + 6px);background:var(--coral
   <section id="v-list">
     <div class="adderwrap">
       <div class="adder">
-        <input id="newword" type="text" autocapitalize="off" autocorrect="off" spellcheck="false"
+        <input id="newword" type="text" autocapitalize="off" autocorrect="on" spellcheck="true"
                autocomplete="off" placeholder="輸入不會的單字或片語" enterkeyhint="done">
         <button id="addbtn">加入</button>
       </div>
@@ -623,7 +623,10 @@ async function fetchSugs(prefix){
     if(!r.ok) return;
     const j = await r.json();
     if($('#newword').value.trim().toLowerCase() !== prefix) return;
-    sugItems = j.map(x => x.word).filter(x => x.toLowerCase() !== prefix).slice(0, 6);
+    // 完全一樣的字也列出來，而且排第一個，方便直接點
+    const list = j.map(x => x.word);
+    const exact = list.filter(x => x.toLowerCase() === prefix);
+    sugItems = [...exact, ...list.filter(x => x.toLowerCase() !== prefix)].slice(0, 6);
     sugIdx = -1; renderSugs();
   }catch(e){}
 }
