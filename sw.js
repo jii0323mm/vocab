@@ -1,5 +1,5 @@
 /* 單字本 service worker：App 本身離線可開；後台、查字、輸入建議、發音一律走網路 */
-const VERSION = 'vocab-v6';
+const VERSION = 'vocab-v7';
 const SHELL = [
   './',
   './index.html',
@@ -17,7 +17,7 @@ self.addEventListener('install', e => {
 self.addEventListener('activate', e => {
   e.waitUntil(
     caches.keys()
-      .then(keys => Promise.all(keys.filter(k => k !== VERSION).map(k => caches.delete(k))))
+      .then(keys => Promise.all(keys.filter(k => k !== VERSION && !k.startsWith('vocab-dict')).map(k => caches.delete(k))))
       .then(() => self.clients.claim())
   );
 });
@@ -29,6 +29,9 @@ self.addEventListener('fetch', e => {
 
   // 動態資料不快取
   if (/script\.google(usercontent)?\.com|datamuse\.com|youdao\.com/.test(url.hostname)) return;
+
+  // 離線字典由頁面自己管理（vocab-dict 快取）
+  if (url.pathname.includes('/dict/')) return;
 
   // 頁面：先網路，離線才用快取
   if (req.mode === 'navigate') {

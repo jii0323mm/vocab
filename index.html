@@ -180,6 +180,9 @@ nav .badge{position:absolute;top:6px;left:calc(50% + 6px);background:var(--coral
 .spin{display:inline-block;width:14px;height:14px;border:2px solid var(--rule);border-top-color:var(--ink);border-radius:50%;animation:sp .8s linear infinite;vertical-align:-2px;margin-right:6px}
 @keyframes sp{to{transform:rotate(360deg)}}
 .row.pending{opacity:.65}
+.row.queued .chip{background:#FFF4CC;color:#8A6D00}
+.offnote{font-size:13px;color:var(--graphite);background:var(--soft);border-radius:10px;padding:9px 12px;margin:14px 0 4px}
+.credit{font-size:12px;color:#A3A6AC;margin-top:10px}
 .goalq .chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
 .chipbtn{border:1px solid var(--rule);background:var(--paper);border-radius:999px;padding:5px 12px;font-size:13.5px}
 .goalq textarea,.goaltext{width:100%;background:var(--paper);border:1px solid var(--rule);border-radius:10px;padding:9px 11px;resize:vertical;line-height:1.45}
@@ -291,6 +294,12 @@ nav .badge{position:absolute;top:6px;left:calc(50% + 6px);background:var(--coral
       <div class="voicerow"><select id="myvoice" class="sel"></select><button class="btn" id="voicetest">試聽</button></div>
     </div>
     <div class="block">
+      <h2>離線字典</h2>
+      <p id="dictinfo"></p>
+      <div class="acts"><button class="btn" id="dictbtn">下載離線字典</button><button class="btn ghost" id="dictdel" hidden>移除</button></div>
+      <p class="credit">字典資料：ECDICT（中文意思）、CMU Pronouncing Dictionary（美式發音）。</p>
+    </div>
+    <div class="block">
       <h2>各格單字數</h2>
       <table class="tbl" id="boxtable"></table>
     </div>
@@ -344,6 +353,8 @@ const TOP = BOXES.length;   // 第 8 格是終點，不畢業
 const DAY = 86400000;
 const BOXLABEL = ['1天', '3天', '7天', '14天', '1個月', '3個月', '半年', '1年'];
 const SKEY = 'vocab2.session', CKEY = n => 'vocab2.cache.' + n, QKEY = n => 'vocab2.queue.' + n;
+const AQKEY = n => 'vocab2.addq.' + n;   // 沒網路時加的字，等有網路再查
+const DKEY = 'vocab2.dict', DICT_CACHE = 'vocab-dict-v1';
 
 /* ================= 小工具 ================= */
 const $ = s => document.querySelector(s);
@@ -388,8 +399,9 @@ let settingsVer = 0;   // 本機改過設定後，比它早發出的同步結果
 let boxFilter = 0;                      // 0 = 全部
 let tab = 'list';
 
-function saveCache(){ if(session) store.set(CKEY(session.name), words.filter(w => !w.pending)); }
-const isDue = w => !w.pending && Number(w.due || 0) <= Date.now();
+const live = w => !w.pending && !w.queued;   // 已經存進後台的字
+function saveCache(){ if(session) store.set(CKEY(session.name), words.filter(live)); }
+const isDue = w => live(w) && Number(w.due || 0) <= Date.now();
 const boxOf = w => Math.min(TOP, Number(w.box) || 1);
 const todayKey = () => new Date().toDateString();
 const reviewedToday = () => words.filter(w => w.lastReview && new Date(w.lastReview).toDateString() === todayKey()).length;
@@ -458,18 +470,19 @@ async function enterApp(){
   $('#authview').hidden = true; $('#appview').hidden = false;
   document.body.classList.add('authed');
   $('#who').textContent = session.name;
-  words = store.get(CKEY(session.name), []).filter(w => !w.pending);
+  words = store.get(CKEY(session.name), []).filter(live).concat(store.get(AQKEY(session.name), []));
   settings = store.get(CKEY(session.name) + '.settings', settings);
   go('list');
   await flushQueue();
   await refresh();
+  flushAdds();
 }
 
 async function refresh(){
   const ver = settingsVer;
   try{
     const r = await api('list');
-    words = (r.words || []).concat(words.filter(w => w.pending));
+    words = (r.words || []).concat(words.filter(w => !live(w)));
     if(r.settings && ver === settingsVer){ settings = r.settings; store.set(CKEY(session.name) + '.settings', settings); }
     saveCache();
     renderAll();
@@ -503,7 +516,7 @@ function renderBadge(){
 /* ================= 單字本 ================= */
 function boxCounts(){
   const c = Array(TOP + 1).fill(0);
-  words.forEach(w => { if(!w.pending) c[boxOf(w)]++; });
+  words.forEach(w => { if(live(w)) c[boxOf(w)]++; });
   return c;
 }
 function renderGoalCard(){
@@ -571,7 +584,10 @@ function renderList(){
   body.innerHTML = list.map(w => {
     const due = isDue(w);
     if(w.pending) return `<div class="row pending"><span class="t"><span class="term">${esc(w.term)}</span>
-      <span class="zh"><span class="spin"></span>查詢中…</span></span></div>`;
+      <span class="zh"><span class="spin"></span>查詢中…${w.preview || w.zh ? '　' + esc(w.preview || w.zh) : ''}</span></span></div>`;
+    if(w.queued) return `<button class="row queued" data-id="${esc(w.id)}">
+      <span class="t"><span class="term">${esc(w.term)}</span><span class="zh">${esc(w.zh || '有網路後自動查詢')}</span></span>
+      <span class="chip">待查詢</span></button>`;
     return `<button class="row" data-id="${esc(w.id)}">
       <span class="t"><span class="term">${esc(w.term)}</span><span class="zh">${esc(w.zh)}</span></span>
       <span class="chip${due ? ' due' : ''}">${due ? '待複習' : '第' + boxOf(w) + '格'}</span>
@@ -589,23 +605,140 @@ function addWord(raw){
   const term = raw.trim().replace(/\s+/g, ' ');
   if(!term) return;
   const dup = words.find(w => w.term.toLowerCase() === term.toLowerCase());
-  if(dup){ toast(dup.pending ? '「' + term + '」還在查詢中' : '這個字已經在單字本裡了'); if(!dup.pending) openWord(dup.id); return; }
+  if(dup){
+    if(dup.pending){ toast('「' + term + '」還在查詢中'); return; }
+    toast(dup.queued ? '「' + term + '」已經在待查清單裡' : '這個字已經在單字本裡了'); openWord(dup.id); return;
+  }
 
-  const tmp = { id: 'tmp' + Date.now() + Math.random().toString(36).slice(2, 5), term, zh: '查詢中…',
+  const tmp = { id: 'tmp' + Date.now() + Math.random().toString(36).slice(2, 5), term, zh: '',
     pending: true, box: 1, due: '', senses: [], forms: [], right: 0, wrong: 0, createdAt: new Date().toISOString() };
   words.unshift(tmp);
   renderAll();
+  // 有離線字典的話，查詢中先顯示意思
+  if(dictReady()) dictLookup(term).then(d => { if(d && tmp.pending){ tmp.preview = d.zh; renderAll(); } });
+  if(navigator.onLine === false){ queueAdd(tmp); return; }
   api('add', { term, goal: settings.goal }).then(r => {
     words = words.filter(w => w.id !== tmp.id);
     if(!words.some(w => w.id === r.word.id)) words.unshift(r.word);
     saveCache(); renderAll();
     if(sheetWord && sheetWord.id === tmp.id) openWord(r.word.id);
   }).catch(e => {
+    if(e.code === 'net'){ queueAdd(tmp); return; }
     words = words.filter(w => w.id !== tmp.id);
     renderAll();
     toast(e.code === 'notfound' ? e.message : '「' + term + '」沒加成功：' + e.message, 3600);
   });
 }
+
+/* ---------- 待查清單：沒網路先存起來，有網路再一個一個查 ---------- */
+async function queueAdd(tmp){
+  const d = await dictLookup(tmp.term);
+  Object.assign(tmp, d || { zh: '' }, { pending: false, queued: true });
+  delete tmp.preview;
+  if(!session) return;
+  if(!words.includes(tmp)) words.unshift(tmp);
+  const q = store.get(AQKEY(session.name), []).filter(x => x.id !== tmp.id);
+  q.push(tmp); store.set(AQKEY(session.name), q);
+  renderAll();
+  toast(d ? '沒網路，先用離線字典；有網路會自動補上例句' : '沒網路，先存進待查清單，有網路會自動查', 3200);
+}
+let addFlushing = false;
+async function flushAdds(){
+  if(!session || addFlushing || navigator.onLine === false) return;
+  addFlushing = true;
+  const name = session.name;
+  try{
+    let q = store.get(AQKEY(name), []);
+    while(q.length && session && session.name === name){
+      const item = q[0];
+      const w = words.find(x => x.id === item.id);
+      let stop = false;
+      if(w){
+        w.pending = true; renderAll();
+        try{
+          const r = await api('add', { term: item.term, goal: settings.goal });
+          words = words.filter(x => x.id !== item.id);
+          if(!words.some(x => x.id === r.word.id)) words.unshift(r.word);
+          if(sheetWord && sheetWord.id === item.id) closeSheet();
+          saveCache();
+        }catch(e){
+          w.pending = false;
+          if(e.code === 'net' || e.code === 'auth') stop = true;
+          else{
+            words = words.filter(x => x.id !== item.id);
+            toast(e.code === 'notfound' ? e.message : '「' + item.term + '」沒加成功：' + e.message, 3600);
+          }
+        }
+      }
+      if(stop){ renderAll(); break; }
+      q = store.get(AQKEY(name), []).filter(x => x.id !== item.id); store.set(AQKEY(name), q);
+      renderAll();
+    }
+  }finally{ addFlushing = false; }
+}
+window.addEventListener('online', () => flushAdds());
+
+/* ---------- 離線字典（ECDICT 中文意思＋CMU 美式發音） ---------- */
+const dictMem = {};
+const dictReady = () => !!store.get(DKEY, null);
+async function dictFile(letter){
+  if(dictMem[letter]) return dictMem[letter];
+  const url = 'dict/' + letter + '.json';
+  let res = null;
+  try{ res = await (await caches.open(DICT_CACHE)).match(url); }catch(e){}
+  if(!res){ res = await fetch(url); if(!res.ok) throw new Error('no dict'); }
+  return dictMem[letter] = await res.json();
+}
+async function dictLookup(term){
+  try{
+    const lw = term.toLowerCase().trim();
+    if(!/^[a-z]/.test(lw)) return null;
+    let e = (await dictFile(lw[0]))[lw], base = '';
+    if(typeof e === 'string'){ base = e.slice(1); e = (await dictFile(base[0]))[base]; }
+    if(!Array.isArray(e)) return null;
+    base = base || (typeof e[4] === 'string' ? e[4] : '');
+    return {
+      phon: e[0] || '', zh: e[1] || '',
+      senses: (e[2] || []).map(([pos, zh]) => ({ pos, zh, def: '' })),
+      forms: (Array.isArray(e[3]) ? e[3] : []).map(([label, value]) => ({ label, value })),
+      note: base && base !== lw ? '是「' + base + '」的變化形' : ''
+    };
+  }catch(err){ return null; }
+}
+async function downloadDict(){
+  const b = $('#dictbtn'); b.disabled = true;
+  try{
+    const meta = await (await fetch('dict/meta.json', { cache: 'no-store' })).json();
+    const c = await caches.open(DICT_CACHE);
+    for(let i = 0; i < meta.files.length; i++){
+      b.innerHTML = `<span class="spin"></span>下載中 ${Math.round(i / meta.files.length * 100)}%`;
+      const url = 'dict/' + meta.files[i] + '.json';
+      const res = await fetch(url, { cache: 'no-cache' });
+      if(!res.ok) throw new Error('下載失敗');
+      await c.put(url, res);
+    }
+    store.set(DKEY, { version: meta.version, words: meta.words, at: Date.now() });
+    for(const k in dictMem) delete dictMem[k];
+    try{ navigator.storage && navigator.storage.persist && navigator.storage.persist(); }catch(e){}
+    toast('離線字典下載好了');
+  }catch(e){ toast('下載沒完成，有網路再試一次', 3200); }
+  b.disabled = false; renderDict();
+}
+async function removeDict(){
+  try{ await caches.delete(DICT_CACHE); }catch(e){}
+  store.del(DKEY); for(const k in dictMem) delete dictMem[k];
+  renderDict(); toast('移除了');
+}
+function renderDict(){
+  const d = store.get(DKEY, null);
+  $('#dictinfo').textContent = d
+    ? `已下載（${Number(d.words).toLocaleString()} 個字和片語）。沒網路時加字，會先用離線字典顯示意思和音標，有網路再自動用 AI 補上例句。`
+    : '下載後，沒網路也能加字，馬上看到中文意思、詞性和音標；有網路時再自動用 AI 補上例句。大約 3 MB。';
+  $('#dictbtn').textContent = d ? '重新下載' : '下載離線字典';
+  $('#dictdel').hidden = !d;
+}
+$('#dictbtn').onclick = downloadDict;
+$('#dictdel').onclick = () => { if(confirm('移除離線字典？')) removeDict(); };
 $('#addbtn').onclick = () => { const v = $('#newword').value; $('#newword').value = ''; hideSugs(); addWord(v); $('#newword').focus(); };
 
 /* ---------- 輸入建議 ---------- */
@@ -731,6 +864,28 @@ document.addEventListener('keydown', e => { if(e.key === 'Escape' && !$('#sheet'
 
 function renderSheet(){
   const w = sheetWord;
+  if(w.queued){
+    $('#sheetin').innerHTML = `
+      <div class="sheettop">
+        <span class="termwrap"><i class="marker"></i><span class="term">${esc(w.term)}</span></span>
+        <span style="display:flex;gap:8px">
+          <button class="iconbtn" id="sp" aria-label="唸出 ${esc(w.term)}">♪</button>
+          <button class="iconbtn" id="cl" aria-label="關閉">✕</button>
+        </span>
+      </div>
+      ${briefHtml(w)}
+      <div class="offnote">${w.zh ? '這是離線字典的意思，音標是近似的。' : '還沒查詢。'}有網路時會自動用 AI 查好，補上 KK 音標和例句，之後就能複習。</div>
+      ${(w.senses || []).length ? moreHtml(w) : ''}
+      <div class="acts"><button class="btn del" id="delbtn">從待查清單刪掉</button></div>`;
+    $('#sp').onclick = () => speak(w.term);
+    $('#cl').onclick = closeSheet;
+    $('#delbtn').onclick = () => {
+      words = words.filter(x => x.id !== w.id);
+      store.set(AQKEY(session.name), store.get(AQKEY(session.name), []).filter(x => x.id !== w.id));
+      closeSheet(); renderAll(); toast('刪掉了');
+    };
+    return;
+  }
   const ed = editing ? `
     <form class="editor" id="editform">
       <div><label for="e-zh">中文意思</label><input id="e-zh" data-k="zh" value="${esc(w.zh)}"></div>
@@ -818,7 +973,7 @@ function moreReview(n){
   renderReview();
 }
 const shuffle = a => { a = a.slice(); for(let i = a.length - 1; i > 0; i--){ const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
-const ready = () => words.filter(w => !w.pending);
+const ready = () => words.filter(live);
 // 最不熟：格子越前面越不熟，同格子裡答錯比例高的先
 const weakest = n => ready().sort((a, b) => boxOf(a) - boxOf(b) ||
   (b.wrong / (b.right + b.wrong || 1)) - (a.wrong / (a.right + a.wrong || 1))).slice(0, n);
@@ -870,7 +1025,7 @@ function renderReview(){
   if(qi >= queue.length){
     const waiting = dueList().length, goal = settings.dailyGoal;
     const did = reviewedToday();
-    const next = words.filter(w => !isDue(w) && !w.pending).sort((a, b) => a.due - b.due)[0];
+    const next = words.filter(w => !isDue(w) && live(w)).sort((a, b) => a.due - b.due)[0];
     let title, body = '';
     if(practice){
       title = '練習完了';
@@ -999,6 +1154,7 @@ function renderMe(){
   if(![...sel.options].some(o => o.value === v)) sel.insertAdjacentHTML('beforeend', `<option value="${v}">${v} 個</option>`);
   sel.value = v;
   renderVoices();
+  renderDict();
 }
 function renderVoices(){
   const sel = $('#myvoice'), list = usVoices(), saved = store.get(VKEY, '');
@@ -1030,7 +1186,7 @@ $('#installbtn').onclick = async () => { if(!deferred) return; deferred.prompt()
 
 /* 回到前景時重新同步（例如另一台裝置剛加了字） */
 document.addEventListener('visibilitychange', () => {
-  if(document.visibilityState === 'visible' && session){ flushQueue().then(refresh); }
+  if(document.visibilityState === 'visible' && session){ flushQueue().then(refresh).then(flushAdds); }
 });
 
 /* ================= 啟動 ================= */
