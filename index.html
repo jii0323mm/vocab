@@ -623,7 +623,7 @@ function addWord(raw){
     saveCache(); renderAll();
     if(sheetWord && sheetWord.id === tmp.id) openWord(r.word.id);
   }).catch(e => {
-    if(e.code === 'net'){ queueAdd(tmp); return; }
+    if(RETRY.includes(e.code)){ queueAdd(tmp, e.code); return; }
     words = words.filter(w => w.id !== tmp.id);
     renderAll();
     toast(e.code === 'notfound' ? e.message : '「' + term + '」沒加成功：' + e.message, 3600);
@@ -631,7 +631,10 @@ function addWord(raw){
 }
 
 /* ---------- 待查清單：沒網路先存起來，有網路再一個一個查 ---------- */
-async function queueAdd(tmp){
+const RETRY = ['net', 'busy', 'gemini'];   // 這些錯誤先排隊，等一下自動再查
+let retryTimer = null;
+function retryLater(){ clearTimeout(retryTimer); retryTimer = setTimeout(() => flushAdds(), 60000); }
+async function queueAdd(tmp, why){
   const d = await dictLookup(tmp.term);
   Object.assign(tmp, d || { zh: '' }, { pending: false, queued: true });
   delete tmp.preview;
@@ -640,7 +643,10 @@ async function queueAdd(tmp){
   const q = store.get(AQKEY(session.name), []).filter(x => x.id !== tmp.id);
   q.push(tmp); store.set(AQKEY(session.name), q);
   renderAll();
-  toast(d ? '沒網路，先用離線字典；有網路會自動補上例句' : '沒網路，先存進待查清單，有網路會自動查', 3200);
+  if(why && why !== 'net'){
+    retryLater();
+    toast(d ? 'AI 查詢太忙，先用離線字典；等一下會自動再查' : 'AI 查詢太忙，先存進待查清單，等一下會自動再查', 3200);
+  }else toast(d ? '沒網路，先用離線字典；有網路會自動補上例句' : '沒網路，先存進待查清單，有網路會自動查', 3200);
 }
 let addFlushing = false;
 async function flushAdds(){
@@ -664,6 +670,7 @@ async function flushAdds(){
         }catch(e){
           w.pending = false;
           if(e.code === 'net' || e.code === 'auth') stop = true;
+          else if(e.code === 'busy' || e.code === 'gemini'){ stop = true; retryLater(); }
           else{
             words = words.filter(x => x.id !== item.id);
             toast(e.code === 'notfound' ? e.message : '「' + item.term + '」沒加成功：' + e.message, 3600);
