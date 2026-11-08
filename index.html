@@ -607,7 +607,10 @@ function addWord(raw){
   const dup = words.find(w => w.term.toLowerCase() === term.toLowerCase());
   if(dup){
     if(dup.pending){ toast('「' + term + '」還在查詢中'); return; }
-    toast(dup.queued ? '「' + term + '」已經在待查清單裡' : '這個字已經在單字本裡了'); openWord(dup.id); return;
+    toast(dup.queued ? '「' + term + '」已經在待查清單裡' : '這個字已經在單字本裡了，會早一點再考你'); openWord(dup.id);
+    // 又查一次＝還不熟：後台會把這張卡往回一格
+    if(live(dup)) api('add', { term: dup.term, goal: settings.goal }).then(r => { if(r.word){ replaceWord(r.word); if(sheetWord && sheetWord.id === r.word.id) renderSheet(); } }).catch(() => {});
+    return;
   }
 
   const tmp = { id: 'tmp' + Date.now() + Math.random().toString(36).slice(2, 5), term, zh: '',
@@ -623,7 +626,7 @@ function addWord(raw){
     saveCache(); renderAll();
     if(sheetWord && sheetWord.id === tmp.id) openWord(r.word.id);
     const conv = r.word.term.toLowerCase() !== term.toLowerCase();
-    if(r.duplicate){ toast(conv ? '「' + term + '」是 ' + r.word.term + '，已經在單字本裡了' : '這個字已經在單字本裡了'); openWord(r.word.id); }
+    if(r.duplicate){ replaceWord(r.word); renderAll(); toast((conv ? '「' + term + '」是 ' + r.word.term + '，已經在單字本裡了' : '這個字已經在單字本裡了') + '，會早一點再考你'); openWord(r.word.id); }
     else if(conv) toast('「' + term + '」→ ' + r.word.term);
   }).catch(e => {
     if(RETRY.includes(e.code)){ queueAdd(tmp, e.code); return; }
