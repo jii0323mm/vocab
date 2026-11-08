@@ -258,7 +258,7 @@ nav .badge{position:absolute;top:6px;left:calc(50% + 6px);background:var(--coral
     <div class="adderwrap">
       <div class="adder">
         <input id="newword" type="text" autocapitalize="off" autocorrect="on" spellcheck="true"
-               autocomplete="off" placeholder="輸入不會的單字或片語" enterkeyhint="done">
+               autocomplete="off" placeholder="輸入英文或中文都可以" enterkeyhint="done">
         <button id="addbtn">加入</button>
       </div>
       <div class="sugs" id="sugs" hidden></div>
@@ -622,6 +622,9 @@ function addWord(raw){
     if(!words.some(w => w.id === r.word.id)) words.unshift(r.word);
     saveCache(); renderAll();
     if(sheetWord && sheetWord.id === tmp.id) openWord(r.word.id);
+    const conv = r.word.term.toLowerCase() !== term.toLowerCase();
+    if(r.duplicate){ toast(conv ? '「' + term + '」是 ' + r.word.term + '，已經在單字本裡了' : '這個字已經在單字本裡了'); openWord(r.word.id); }
+    else if(conv) toast('「' + term + '」→ ' + r.word.term);
   }).catch(e => {
     if(RETRY.includes(e.code)){ queueAdd(tmp, e.code); return; }
     words = words.filter(w => w.id !== tmp.id);
